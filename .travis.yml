@@ -5,7 +5,7 @@ services:
 
 before_install:
   - docker info
-  - apk update && apk add make git
+  - apt-get update && apt-get install -y make git
 
 script:
     - make build
