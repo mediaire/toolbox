@@ -3,15 +3,6 @@ sudo: required
 services:
   - docker
 
-addons:
-  apt:
-    packages:
-    - make
-    - git
-
-before_install:
-  - docker info
-
 script:
     - make build
     - make test
