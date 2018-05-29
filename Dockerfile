@@ -6,6 +6,5 @@ WORKDIR /src
 RUN pip install -r requirements.txt
 
 COPY . /src
-
-RUN python setup.py install
+RUN pip install -e .
 
