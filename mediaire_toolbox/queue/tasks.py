@@ -17,7 +17,8 @@ class Task(object):
         input
         output
         dicom_info: dict
-            {'t1': {'header': {...}, 'path': 'path/to/dicoms'}
+            {'t1': {'header': {...}, 'path': 'path/to/dicoms',
+             't2': {...}}
         """
         self.tag = tag
         self.input = input
