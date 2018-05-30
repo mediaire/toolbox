@@ -1,13 +1,14 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 import mediaire_toolbox
 
 setup(
     name='mediaire_toolbox',
     version=mediaire_toolbox.__version__,
-    maintainer='joerg doepfert',
-    packages=['mediaire_toolbox',
-              'mediaire_toolbox.queue'],
+    maintainer='Joerg Doepfert',
+
+    packages=find_packages(),
+
     long_description=open('README.md').read(),
     install_requires=[
         'nose',
