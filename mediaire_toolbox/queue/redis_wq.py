@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """Work queue based on redis.
    Adapted from https://kubernetes.io/docs/tasks/job/fine-parallel-processing-work-queue/rediswq.py
 """
