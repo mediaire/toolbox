@@ -39,14 +39,24 @@ class Task(object):
     def to_bytes(self):
         return json.dumps(self.to_dict()).encode('utf-8')
 
-    def read_bytes(self, bytestring):
-        d = json.loads(bytestring.decode('utf-8'))
+    def read_dict(self, d):
         self.tag  = d['tag']
         self.timestamp  = d['timestamp']
         self.update_timestamp  = d.get('update_timestamp', None)
         self.input = d.get('input', None)
         self.output = d.get('output', None)
         self.dicom_info = d.get('dicom_info', None)
+        return self
+
+    def read_bytes(self, bytestring):
+        d = json.loads(bytestring.decode('utf-8'))
+        self.read_dict(d)
+        return self
+
+    def read_json(self, json_path):
+        with open(json_path, 'r') as f:
+            d = json.load(f)
+        self.read_dict(d)
         return self
 
     def create_child(self, tag=None):
