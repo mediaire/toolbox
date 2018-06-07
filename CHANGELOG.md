@@ -1,7 +1,7 @@
 # Changelog
 
-## [unreleased] - 2018-XX-XX
-* add travis ci
+## [0.3.0] - 2018-06-08
+* add read_dict, read_json
 
 ## [0.2.0] - 2018-05-30
 * add travis ci
