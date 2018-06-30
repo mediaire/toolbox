@@ -80,6 +80,27 @@ class Task(object):
 class DicomTask(Task):
     """Dicom specific task"""
 
+    def __init__(self, tag=None, input=None, output=None, dicom_info=None,
+                 data=None, timestamp=None, update_timestamp=None):
+        """Initializes the Task object.
+        Parameters
+        ----------
+        tag: str
+            String specifying the task. Unique for each task.
+        input
+        output
+        data: dict
+        dicom_info: dict
+            {'t1': {'header': {...}, 'path': 'path/to/dicoms',
+             't2': {...}}
+        """
+        if dicom_info is not None:
+            if data is None:
+                data = {'dicom_info': dicom_info}
+            else:
+                data['dicom_info'] = dicom_info
+        super().__init__(tag, input, output, data, timestamp, update_timestamp)
+
     def get_subject_name(self):
         # the T1 header should always be there
         t1_header = self.data['dicom_info']['t1']['header']
