@@ -3,6 +3,9 @@
 
 ## [unreleased] - 2018-XX-XX
 
+## [0.5.0] - 2018-06-30
+* redesign (strip down) dicom task
+
 ## [0.4.2] - 2018-06-30
 * fix read_dict() no. 2
 

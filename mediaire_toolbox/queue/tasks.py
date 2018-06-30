@@ -78,37 +78,7 @@ class Task(object):
 
 
 class DicomTask(Task):
-    """Task containing dicom information."""
-
-    def __init__(self, tag=None, input=None, output=None, dicom_info=None,
-                 timestamp=None, update_timestamp=None):
-        """Initializes the Task object.
-
-        Parameters
-        ----------
-        tag: str
-            String specifying the task. Unique for each task.
-        input
-        output
-        dicom_info: dict
-            {'t1': {'header': {...}, 'path': 'path/to/dicoms',
-             't2': {...}}
-        """
-        data = {'dicom_info': dicom_info}
-        super().__init__(tag, input, output, data, timestamp, update_timestamp)
-        self.dicom_info = self.data['dicom_info']  # for backwards compatibility
-
-
-    def read_dict(self, d):
-        tag  = d['tag']
-        timestamp  = d['timestamp']
-        update_timestamp  = d.get('update_timestamp', None)
-        input = d.get('input', None)
-        output = d.get('output', None)
-        dicom_info = d.get('dicom_info', None)
-        self.__init__(tag, input, output, dicom_info, timestamp, update_timestamp)
-        return self
-
+    """Dicom specific task"""
 
     def get_subject_name(self):
         # the T1 header should always be there
