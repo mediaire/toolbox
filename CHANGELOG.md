@@ -3,6 +3,9 @@
 
 ## [unreleased] - 2018-XX-XX
 
+## [0.4.2] - 2018-06-30
+* fix read_dict() no. 2
+
 ## [0.4.1] - 2018-06-30
 * fix read_dict()
 
