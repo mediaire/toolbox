@@ -63,12 +63,11 @@ class Task(object):
         """Creates and returns a follow up task object."""
         if tag is None:
             tag = self.tag + '__child'
-        child_task = Task(tag=tag,
-                          input=deepcopy(self.output), # be safe here
-                          data=self.data, # this will never change
-                          timestamp=self.timestamp,
-                          update_timestamp=int(time.time())
-                          )
+        child_task = deepcopy(self)
+        child_task.tag = tag
+        child_task.input = deepcopy(self.output)
+        child_task.update_timestamp = int(time.time())
+        child_task.output = None
         return child_task
 
     def __str__(self):

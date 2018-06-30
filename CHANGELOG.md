@@ -3,6 +3,9 @@
 
 ## [unreleased] - 2018-XX-XX
 
+## [0.5.1] - 2018-06-30
+* fix create child task
+
 ## [0.5.0] - 2018-06-30
 * redesign (strip down) dicom task
 

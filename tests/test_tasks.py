@@ -47,7 +47,8 @@ class TestTask(unittest.TestCase):
 class TestDicomTask(unittest.TestCase):
 
     def setUp(self):
-        self.task_d = {"output": None, "tag": "spm_lesion",
+        self.task_d = {"tag": "spm_lesion",
+                       "output": {"foo": "bar"},
                        "timestamp": 1530368396,
                         "data": {"dicom_info":
                                      {"t1": {"path": "path",
@@ -64,6 +65,34 @@ class TestDicomTask(unittest.TestCase):
 
     def test_get_subject_name(self):
         task = DicomTask().read_dict(self.task_d)
+        name = task.get_subject_name()
+        self.assertEqual(name, 'Max')
+
+    def test_create_child(self):
+        task = DicomTask().read_dict(self.task_d)
+        new_tag = 'child_task'
+        child_task = task.create_child(new_tag)
+        self.assertEqual(child_task.tag, new_tag)
+        self.assertEqual(child_task.timestamp, task.timestamp)
+        self.assertNotEqual(child_task.update_timestamp,
+                            task.update_timestamp)
+        self.assertGreaterEqual(child_task.update_timestamp,
+                            task.timestamp)
+
+    def test_child_does_not_influence_parent(self):
+        task = DicomTask().read_dict(self.task_d)
+        new_tag = 'child_task'
+        parent_task_output = deepcopy(task.output)
+        child_task = task.create_child(new_tag)
+        # change input of `child_task`
+        child_task.input['out'] = 'bar'
+        # this should not change output of parent task
+        self.assertEqual(task.output, parent_task_output)
+
+    def test_child_get_subject_name(self):
+        task = DicomTask().read_dict(self.task_d)
+        new_tag = 'child_task'
+        child_task = task.create_child(new_tag)
         name = task.get_subject_name()
         self.assertEqual(name, 'Max')
 
