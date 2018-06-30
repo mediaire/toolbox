@@ -3,6 +3,9 @@
 
 ## [unreleased] - 2018-XX-XX
 
+## [0.4.1] - 2018-06-30
+* fix read_dict()
+
 ## [0.4.0] - 2018-06-30
 * add dicom specific task
 

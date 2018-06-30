@@ -38,12 +38,13 @@ class Task(object):
         return json.dumps(self.to_dict()).encode('utf-8')
 
     def read_dict(self, d):
-        self.tag  = d['tag']
-        self.timestamp  = d['timestamp']
-        self.update_timestamp  = d.get('update_timestamp', None)
-        self.input = d.get('input', None)
-        self.output = d.get('output', None)
-        self.data = d.get('data', None)
+        tag  = d['tag']
+        timestamp  = d['timestamp']
+        update_timestamp  = d.get('update_timestamp', None)
+        input = d.get('input', None)
+        output = d.get('output', None)
+        data = d.get('data', None)
+        self.__init__(tag, input, output, data, timestamp, update_timestamp)
         return self
 
     def read_bytes(self, bytestring):
