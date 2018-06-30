@@ -43,3 +43,27 @@ class TestTask(unittest.TestCase):
         # this should not change output of parent task
         self.assertEqual(self.task.output, parent_task_output)
 
+
+class TestDicomTask(unittest.TestCase):
+
+    def setUp(self):
+        self.task_d = {"output": None, "tag": "spm_lesion",
+                       "timestamp": 1530368396,
+                        "data": {"dicom_info":
+                                     {"t1": {"path": "path",
+                                             "header": {"PatientName": "Max"}
+                                             }
+                                      }
+                                 }
+                       }
+
+    def test_read_dict(self):
+        task = DicomTask().read_dict(self.task_d)
+        self.assertEqual(task.data['dicom_info']['t1']['path'], "path")
+
+
+    def test_get_subject_name(self):
+        task = DicomTask().read_dict(self.task_d)
+        name = task.get_subject_name()
+        self.assertEqual(name, 'Max')
+

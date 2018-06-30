@@ -44,7 +44,8 @@ class Task(object):
         input = d.get('input', None)
         output = d.get('output', None)
         data = d.get('data', None)
-        self.__init__(tag, input, output, data, timestamp, update_timestamp)
+        self.__init__(tag=tag, input=input, output=output, data=data,
+                      timestamp=timestamp, update_timestamp=update_timestamp)
         return self
 
     def read_bytes(self, bytestring):
