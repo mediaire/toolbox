@@ -1,7 +1,11 @@
 import unittest
 from copy import deepcopy
 
-from mediaire_toolbox.queue.tasks import Task
+from mediaire_toolbox.queue.tasks import Task, DicomTask
+
+
+DICOM_TASK = {'t1': 'info'}
+
 
 class TestTask(unittest.TestCase):
 
@@ -41,3 +45,23 @@ class TestTask(unittest.TestCase):
         child_task.input['out'] = 'bar'
         # this should not change output of parent task
         self.assertEqual(self.task.output, parent_task_output)
+
+
+class TestDicomTask(unittest.TestCase):
+
+    def setUp(self):
+        self.task = Task(tag='tag',
+                         input={'t1': 'foo', 't2': 'bar'},
+                         output={'out': 'foo'})
+        self.dicom_task = DicomTask(tag='tag', input={'t1': 'foo', 't2': 'bar'},
+                                    output={'out': 'foo'},
+                                    dicom_info=DICOM_TASK)
+
+    def test_dicom_info_has_correct_values(self):
+        self.assertEqual(self.dicom_task.dicom_info, DICOM_TASK)
+        self.assertEqual(self.dicom_task.data['dicom_info'], DICOM_TASK)
+
+    def test_dicom_info_changes_correctly(self):
+        self.dicom_task.data['dicom_info']['t3'] = 'foo'
+        self.assertEqual(self.dicom_task.dicom_info['t3'],
+                         self.dicom_task.data['dicom_info']['t3'] )

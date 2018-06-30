@@ -6,7 +6,7 @@ from copy import deepcopy
 class Task(object):
     """Defines task objects that can be handled by the task manager."""
 
-    def __init__(self, tag=None, input=None, output=None, dicom_info=None,
+    def __init__(self, tag=None, input=None, output=None, data=None,
                  timestamp=None, update_timestamp=None):
         """Initializes the Task object.
 
@@ -14,18 +14,16 @@ class Task(object):
         ----------
         tag: str
             String specifying the task. Unique for each task.
-        input
-        output
-        dicom_info: dict
-            {'t1': {'header': {...}, 'path': 'path/to/dicoms',
-             't2': {...}}
+        input: object
+        output: object
+        data: dict
         """
         self.tag = tag
         self.input = input
         self.output = output
         self.timestamp = timestamp or int(time.time())
         self.update_timestamp = update_timestamp
-        self.dicom_info = dicom_info
+        self.data = data
         # self.update = None
 
     def to_dict(self):
@@ -34,7 +32,7 @@ class Task(object):
                 'update_timestamp' : self.update_timestamp,
                 'input': self.input,
                 'output': self.output,
-                'dicom_info': self.dicom_info}
+                'data': self.data}
 
     def to_bytes(self):
         return json.dumps(self.to_dict()).encode('utf-8')
@@ -45,7 +43,7 @@ class Task(object):
         self.update_timestamp  = d.get('update_timestamp', None)
         self.input = d.get('input', None)
         self.output = d.get('output', None)
-        self.dicom_info = d.get('dicom_info', None)
+        self.data = d.get('data', None)
         return self
 
     def read_bytes(self, bytestring):
@@ -65,7 +63,7 @@ class Task(object):
             tag = self.tag + '__child'
         child_task = Task(tag=tag,
                           input=deepcopy(self.output), # be safe here
-                          dicom_info=self.dicom_info, # this will never change
+                          data=self.data, # this will never change
                           timestamp=self.timestamp,
                           update_timestamp=int(time.time())
                           )
@@ -76,3 +74,32 @@ class Task(object):
 
     def __repr__(self):
         return str(self.to_dict())
+
+
+class DicomTask(Task):
+    """Task containing dicom information."""
+
+    def __init__(self, tag=None, input=None, output=None, dicom_info=None,
+                 timestamp=None, update_timestamp=None):
+        """Initializes the Task object.
+
+        Parameters
+        ----------
+        tag: str
+            String specifying the task. Unique for each task.
+        input
+        output
+        dicom_info: dict
+            {'t1': {'header': {...}, 'path': 'path/to/dicoms',
+             't2': {...}}
+        """
+        data = {'dicom_info': dicom_info}
+        super().__init__(tag, input, output, data, timestamp, update_timestamp)
+        self.dicom_info = self.data['dicom_info']  # for backwards compatibility
+
+
+    def get_subject_name(self):
+        # the T1 header should always be there
+        t1_header = self.data['dicom_info']['t1']['header']
+        return t1_header['PatientName']
+

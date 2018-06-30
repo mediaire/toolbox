@@ -1,5 +1,11 @@
 # Changelog
 
+
+## [unreleased] - 2018-XX-XX
+
+## [0.4.0] - 2018-06-30
+* add dicom specific task
+
 ## [0.3.0] - 2018-06-08
 * add read_dict, read_json
 
