@@ -99,6 +99,17 @@ class DicomTask(Task):
         self.dicom_info = self.data['dicom_info']  # for backwards compatibility
 
 
+    def read_dict(self, d):
+        tag  = d['tag']
+        timestamp  = d['timestamp']
+        update_timestamp  = d.get('update_timestamp', None)
+        input = d.get('input', None)
+        output = d.get('output', None)
+        dicom_info = d.get('dicom_info', None)
+        self.__init__(tag, input, output, dicom_info, timestamp, update_timestamp)
+        return self
+
+
     def get_subject_name(self):
         # the T1 header should always be there
         t1_header = self.data['dicom_info']['t1']['header']
