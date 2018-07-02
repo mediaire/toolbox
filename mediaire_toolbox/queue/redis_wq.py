@@ -117,8 +117,11 @@ class RedisWQ(object):
         Optionally provide error message `msg`.
         """
 
-        self._db.lrem(self._processing_q_key, 0, value)
-        self._db.lpush(self._failed_q_key, value)
+        logger.info(redis.lrange(self._processing_q_key, 0, -1))
+        exit_code = self._db.lrem(self._processing_q_key, 0, value)
+        logger.info("{}".format(exit_code))
+        if exit_code != 0:
+            self._db.lpush(self._failed_q_key, value)
 
     def complete(self, value):
         """Complete working on the item with 'value'.
@@ -135,15 +138,6 @@ class RedisWQ(object):
 
 # TODO: add functions to clean up all keys associated with "name" when
 # processing is complete.
-
-# TODO: add a function to add an item to the queue.  Atomically
-# check if the queue is empty and if so fail to add the item
-# since other workers might think work is done and be in the process
-# of exiting.
-
-# TODO(etune): move to my own github for hosting, e.g. github.com/erictune/rediswq-py and
-# make it so it can be pip installed by anyone (see
-# http://stackoverflow.com/questions/8247605/configuring-so-that-pip-install-can-work-from-github)
 
 # TODO(etune): finish code to GC expired leases, and call periodically
 #  e.g. each time lease times out.
