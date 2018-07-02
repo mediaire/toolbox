@@ -132,7 +132,6 @@ class RedisWQ(object):
             logger.debug("Moved '{}' to '{}'".format(itemkey, self._error_q_key))
             assert len_errors == len_msgs
 
-
     def complete(self, value):
         """Complete working on the item with 'value'.
 
