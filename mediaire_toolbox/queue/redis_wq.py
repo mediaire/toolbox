@@ -38,7 +38,8 @@ class RedisWQ(object):
        # Work is initially in main, and moved to processing when a client picks it up.
        self._main_q_key = name
        self._processing_q_key = name + ":processing"
-       self._failed_q_key = name + ":failed"
+       self._error_q_key = name + ":errors"
+       self._error_messages_q_key = name + ":error_messages"
        self._lease_key_prefix = name + ":leased_by_session:"
 
     def sessionID(self):
@@ -110,18 +111,27 @@ class RedisWQ(object):
             self._db.setex(self._lease_key_prefix + itemkey, lease_secs, self._session)
         return item
 
-    def fail(self, value, msg=None):
+    def error(self, value, msg=None):
         """Handle the case when processing of the item with 'value' failed.
 
 
         Optionally provide error message `msg`.
         """
-
-        logger.info(self._db.lrange(self._processing_q_key, 0, -1))
+        itemkey = self._itemkey(value)
+        logger.info("Trying to move '{}' to '{}'".format(itemkey,
+                                                         self._main_q_key))
         exit_code = self._db.lrem(self._processing_q_key, 0, value)
-        logger.info("{}".format(exit_code))
-        if exit_code != 0:
-            self._db.lpush(self._failed_q_key, value)
+        logger.info("exit code: {}".format(exit_code))
+        if exit_code == 0:
+            logger.info("Could not find '{}' in '{}'".format(itemkey,
+                                                             self._main_q_key))
+        else:
+            logger.info("Move '{}' to '{}'".format(itemkey, self._main_q_key))
+            self._db.lpush(self._error_q_key, value)
+            if msg is None: msg = 'unknown error'
+            self._db.lpush(self._error_messages_q_key, msg)
+
+
 
     def complete(self, value):
         """Complete working on the item with 'value'.
