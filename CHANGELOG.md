@@ -3,6 +3,9 @@
 
 ## [unreleased] - 2018-XX-XX
 
+## [0.6.0] - 2018-07-02
+* add error queue
+
 ## [0.5.1] - 2018-06-30
 * fix create child task
 

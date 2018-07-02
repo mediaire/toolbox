@@ -38,6 +38,8 @@ class RedisWQ(object):
        # Work is initially in main, and moved to processing when a client picks it up.
        self._main_q_key = name
        self._processing_q_key = name + ":processing"
+       self._error_q_key = name + ":errors"
+       self._error_messages_q_key = name + ":error_messages"
        self._lease_key_prefix = name + ":leased_by_session:"
 
     def sessionID(self):
@@ -109,6 +111,27 @@ class RedisWQ(object):
             self._db.setex(self._lease_key_prefix + itemkey, lease_secs, self._session)
         return item
 
+    def error(self, value, msg=None):
+        """Handle the case when processing of the item with 'value' failed.
+
+        Optionally provide error message `msg`.
+        """
+        itemkey = self._itemkey(value)
+        if msg is None: msg = 'unknown error'
+        logger.info("{}: Trying to move '{}' to '{}'".format(msg, itemkey,
+                                                             self._error_q_key))
+        exit_code = self._db.lrem(self._processing_q_key, 0, value)
+        logger.debug("exit code: {}".format(exit_code))
+        if exit_code == 0:
+            logger.error("Could not find '{}' in '{}'".format(itemkey,
+                                                             self._processing_q_key))
+        else:
+            len_errors = self._db.lpush(self._error_q_key, value)
+            len_msgs = self._db.lpush(self._error_messages_q_key,
+                                      msg.encode('utf-8'))
+            logger.debug("Moved '{}' to '{}'".format(itemkey, self._error_q_key))
+            assert len_errors == len_msgs
+
     def complete(self, value):
         """Complete working on the item with 'value'.
 
@@ -124,15 +147,6 @@ class RedisWQ(object):
 
 # TODO: add functions to clean up all keys associated with "name" when
 # processing is complete.
-
-# TODO: add a function to add an item to the queue.  Atomically
-# check if the queue is empty and if so fail to add the item
-# since other workers might think work is done and be in the process
-# of exiting.
-
-# TODO(etune): move to my own github for hosting, e.g. github.com/erictune/rediswq-py and
-# make it so it can be pip installed by anyone (see
-# http://stackoverflow.com/questions/8247605/configuring-so-that-pip-install-can-work-from-github)
 
 # TODO(etune): finish code to GC expired leases, and call periodically
 #  e.g. each time lease times out.
