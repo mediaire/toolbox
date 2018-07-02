@@ -114,7 +114,6 @@ class RedisWQ(object):
     def error(self, value, msg=None):
         """Handle the case when processing of the item with 'value' failed.
 
-
         Optionally provide error message `msg`.
         """
         itemkey = self._itemkey(value)
@@ -122,17 +121,16 @@ class RedisWQ(object):
         logger.info("{}: Trying to move '{}' to '{}'".format(msg, itemkey,
                                                              self._error_q_key))
         exit_code = self._db.lrem(self._processing_q_key, 0, value)
-        logger.info("exit code: {}".format(exit_code))
+        logger.debug("exit code: {}".format(exit_code))
         if exit_code == 0:
-            logger.info("Could not find '{}' in '{}'".format(itemkey,
+            logger.error("Could not find '{}' in '{}'".format(itemkey,
                                                              self._processing_q_key))
         else:
             len_errors = self._db.lpush(self._error_q_key, value)
             len_msgs = self._db.lpush(self._error_messages_q_key,
                                       msg.encode('utf-8'))
-            logger.info("Moved '{}' to '{}'".format(itemkey, self._error_q_key))
+            logger.debug("Moved '{}' to '{}'".format(itemkey, self._error_q_key))
             assert len_errors == len_msgs
-
 
 
     def complete(self, value):
