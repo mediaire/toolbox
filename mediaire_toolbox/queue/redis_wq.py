@@ -38,6 +38,7 @@ class RedisWQ(object):
        # Work is initially in main, and moved to processing when a client picks it up.
        self._main_q_key = name
        self._processing_q_key = name + ":processing"
+       self._failed_q_key = name + ":failed"
        self._lease_key_prefix = name + ":leased_by_session:"
 
     def sessionID(self):
@@ -108,6 +109,16 @@ class RedisWQ(object):
             logger.info('{} -> {}'.format(self._lease_key_prefix + itemkey, self._session))
             self._db.setex(self._lease_key_prefix + itemkey, lease_secs, self._session)
         return item
+
+    def fail(self, value, msg=None):
+        """Handle the case when processing of the item with 'value' failed.
+
+
+        Optionally provide error message `msg`.
+        """
+
+        self._db.lrem(self._processing_q_key, 0, value)
+        self._db.lpush(self._failed_q_key, value)
 
     def complete(self, value):
         """Complete working on the item with 'value'.
