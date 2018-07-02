@@ -120,17 +120,17 @@ class RedisWQ(object):
         itemkey = self._itemkey(value)
         if msg is None: msg = 'unknown error'
         logger.info("{}: Trying to move '{}' to '{}'".format(msg, itemkey,
-                                                             self._main_q_key))
+                                                             self._error_q_key))
         exit_code = self._db.lrem(self._processing_q_key, 0, value)
         logger.info("exit code: {}".format(exit_code))
         if exit_code == 0:
             logger.info("Could not find '{}' in '{}'".format(itemkey,
-                                                             self._main_q_key))
+                                                             self._processing_q_key))
         else:
-            logger.info("Move '{}' to '{}'".format(itemkey, self._main_q_key))
             len_errors = self._db.lpush(self._error_q_key, value)
             len_msgs = self._db.lpush(self._error_messages_q_key,
                                       msg.encode('utf-8'))
+            logger.info("Moved '{}' to '{}'".format(itemkey, self._error_q_key))
             assert len_errors == len_msgs
 
 
