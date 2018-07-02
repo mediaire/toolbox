@@ -117,7 +117,7 @@ class RedisWQ(object):
         Optionally provide error message `msg`.
         """
 
-        logger.info(redis.lrange(self._processing_q_key, 0, -1))
+        logger.info(self._db.lrange(self._processing_q_key, 0, -1))
         exit_code = self._db.lrem(self._processing_q_key, 0, value)
         logger.info("{}".format(exit_code))
         if exit_code != 0:
