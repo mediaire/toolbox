@@ -129,7 +129,7 @@ class RedisWQ(object):
             logger.info("Move '{}' to '{}'".format(itemkey, self._main_q_key))
             self._db.lpush(self._error_q_key, value)
             if msg is None: msg = 'unknown error'
-            self._db.lpush(self._error_messages_q_key, msg)
+            self._db.lpush(self._error_messages_q_key, msg.encode('utf-8'))
 
 
 
