@@ -1,6 +1,8 @@
 # no buildin rules and variables
 MAKEFLAGS =+ -rR --warn-undefined-variables
 
+PROJECT = mediaire_toolbox
+IMAGE_BASE_NAME = $(PROJECT)
 IMAGE_BASE_NAME = mediaire_toolbox
 IMAGE_TAG_LATEST = latest
 IMAGE_TAG = $(shell git describe --tags --always --dirty)
@@ -21,5 +23,7 @@ shell:
 	docker run -it $(IMAGE_BASE_NAME):$(IMAGE_TAG) sh
 
 test:
-	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) nosetests tests
+	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) nosetests --with-coverage --cover-package=$(PROJECT) --cover-min-percentage=50 tests $(PROJECT)/*.py
 
+lint:
+	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) flake8 $(PROJECT)

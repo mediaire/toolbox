@@ -22,7 +22,7 @@ class TestTask(unittest.TestCase):
     def test_from_and_to_bytes(self):
         bytes_ = self.task.to_bytes()
         task_from_bytes = Task().read_bytes(bytes_)
-        self.assertEqual(task_from_bytes.__dict__ , self.task.__dict__)
+        self.assertEqual(task_from_bytes.__dict__, self.task.__dict__)
 
     def test_create_child(self):
         new_tag = 'child_task'
@@ -32,7 +32,7 @@ class TestTask(unittest.TestCase):
         self.assertNotEqual(child_task.update_timestamp,
                             self.task.update_timestamp)
         self.assertGreaterEqual(child_task.update_timestamp,
-                            self.task.timestamp)
+                                self.task.timestamp)
 
     def test_child_does_not_influence_parent(self):
         new_tag = 'child_task'
@@ -50,18 +50,17 @@ class TestDicomTask(unittest.TestCase):
         self.task_d = {"tag": "spm_lesion",
                        "output": {"foo": "bar"},
                        "timestamp": 1530368396,
-                        "data": {"dicom_info":
-                                     {"t1": {"path": "path",
-                                             "header": {"PatientName": "Max"}
-                                             }
-                                      }
-                                 }
+                       "data": {"dicom_info":
+                                    {"t1": {"path": "path",
+                                            "header": {"PatientName": "Max"}
+                                            }
+                                     }
+                                }
                        }
 
     def test_read_dict(self):
         task = DicomTask().read_dict(self.task_d)
         self.assertEqual(task.data['dicom_info']['t1']['path'], "path")
-
 
     def test_get_subject_name(self):
         task = DicomTask().read_dict(self.task_d)
@@ -77,7 +76,7 @@ class TestDicomTask(unittest.TestCase):
         self.assertNotEqual(child_task.update_timestamp,
                             task.update_timestamp)
         self.assertGreaterEqual(child_task.update_timestamp,
-                            task.timestamp)
+                                task.timestamp)
 
     def test_child_does_not_influence_parent(self):
         task = DicomTask().read_dict(self.task_d)

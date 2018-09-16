@@ -28,8 +28,8 @@ class Task(object):
 
     def to_dict(self):
         return {'tag': self.tag,
-                'timestamp' : self.timestamp,
-                'update_timestamp' : self.update_timestamp,
+                'timestamp': self.timestamp,
+                'update_timestamp': self.update_timestamp,
                 'input': self.input,
                 'output': self.output,
                 'data': self.data}
@@ -38,9 +38,9 @@ class Task(object):
         return json.dumps(self.to_dict()).encode('utf-8')
 
     def read_dict(self, d):
-        tag  = d['tag']
-        timestamp  = d['timestamp']
-        update_timestamp  = d.get('update_timestamp', None)
+        tag = d['tag']
+        timestamp = d['timestamp']
+        update_timestamp = d.get('update_timestamp', None)
         input = d.get('input', None)
         output = d.get('output', None)
         data = d.get('data', None)

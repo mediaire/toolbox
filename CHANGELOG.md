@@ -2,6 +2,7 @@
 
 
 ## [unreleased] - 2018-XX-XX
+* add linter
 
 ## [0.6.0] - 2018-07-02
 * add error queue

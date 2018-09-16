@@ -1,5 +1,5 @@
 """Work queue based on redis.
-   Adapted from https://kubernetes.io/docs/tasks/job/fine-parallel-processing-work-queue/rediswq.py
+   Adapted from https://kubernetes.io/docs/tasks/job/fine-parallel-processing-work-queue/rediswq.py  # noqa
 """
 
 import redis
@@ -23,24 +23,26 @@ class RedisWQ(object):
     concurrently.
     """
     def __init__(self, name, db=None, **redis_kwargs):
-       """The default connection parameters are: host='localhost', port=6379, db=0
+        """The default connection parameters are:
+        host='localhost', port=6379, db=0
 
-       The work queue is identified by "name".  The library may create other
-       keys with "name" as a prefix. 
-       """
-       if db is None:
-           self._db = redis.StrictRedis(**redis_kwargs)
-       else:
-           self._db = db
-       # The session ID will uniquely identify this "worker".
-       self._session = str(uuid.uuid4())
-       # Work queue is implemented as two queues: main, and processing.
-       # Work is initially in main, and moved to processing when a client picks it up.
-       self._main_q_key = name
-       self._processing_q_key = name + ":processing"
-       self._error_q_key = name + ":errors"
-       self._error_messages_q_key = name + ":error_messages"
-       self._lease_key_prefix = name + ":leased_by_session:"
+        The work queue is identified by "name".  The library may create other
+        keys with "name" as a prefix.
+        """
+        if db is None:
+            self._db = redis.StrictRedis(**redis_kwargs)
+        else:
+            self._db = db
+        # The session ID will uniquely identify this "worker".
+        self._session = str(uuid.uuid4())
+        # Work queue is implemented as two queues: main, and processing.
+        # Work is initially in main, and moved to processing when a client
+        # picks it up.
+        self._main_q_key = name
+        self._processing_q_key = name + ":processing"
+        self._error_q_key = name + ":errors"
+        self._error_messages_q_key = name + ":error_messages"
+        self._lease_key_prefix = name + ":leased_by_session:"
 
     def sessionID(self):
         """Return the ID for this session."""
@@ -55,22 +57,27 @@ class RedisWQ(object):
         return self._db.llen(self._processing_q_key)
 
     def empty(self):
-        """Return True if the queue is empty, including work being done, False otherwise.
+        """Return True if the queue is empty, including work being done, False
+        otherwise.
 
-        False does not necessarily mean that there is work available to work on right now,
+        False does not necessarily mean that there is work available to work
+         on right now,
         """
         return self._main_qsize() == 0 and self._processing_qsize() == 0
 
 # TODO: implement this
 #    def check_expired_leases(self):
-#        """Return to the work queueReturn True if the queue is empty, False otherwise."""
-#        # Processing list should not be _too_ long since it is approximately as long
+#        """Return to the work queueReturn True if the queue is empty,
+    # False otherwise."""
+#        # Processing list should not be _too_ long since it is approximately
+    # as long
 #        # as the number of active and recently active workers.
 #        processing = self._db.lrange(self._processing_q_key, 0, -1)
 #        for item in processing:
 #          # If the lease key is not present for an item (it expired or was 
 #          # never created because the client crashed before creating it)
-#          # then move the item back to the main queue so others can work on it.
+#          # then move the item back to the main queue so others can work on
+           # it.
 #          if not self._lease_exists(item):
 #            TODO: transactionally move the key from processing queue to
 #            to main queue, while detecting if a new lease is created
@@ -89,7 +96,7 @@ class RedisWQ(object):
 
     # for now `lease_secs` is useless!
     def lease(self, lease_secs=5, block=True, timeout=None):
-        """Begin working on an item the work queue. 
+        """Begin working on an item the work queue.
 
         Lease the item for lease_secs.  After that time, other
         workers may consider this client to have crashed or stalled
@@ -98,17 +105,22 @@ class RedisWQ(object):
         If optional args block is true and timeout is None (the default), block
         if necessary until an item is available."""
         if block:
-            item = self._db.brpoplpush(self._main_q_key, self._processing_q_key, timeout=timeout)
+            item = self._db.brpoplpush(self._main_q_key,
+                                       self._processing_q_key, timeout=timeout)
         else:
             item = self._db.rpoplpush(self._main_q_key, self._processing_q_key)
         if item:
-            # Record that we (this session id) are working on a key.  Expire that
+            # Record that we (this session id) are working on a key.  Expire
+            # that
             # note after the lease timeout.
-            # Note: if we crash at this line of the program, then GC will see no lease
+            # Note: if we crash at this line of the program, then GC will
+            # see no lease
             # for this item a later return it to the main queue.
             itemkey = self._itemkey(item)
-            logger.info('{} -> {}'.format(self._lease_key_prefix + itemkey, self._session))
-            self._db.setex(self._lease_key_prefix + itemkey, lease_secs, self._session)
+            logger.info('{} -> {}'.format(self._lease_key_prefix + itemkey,
+                                          self._session))
+            self._db.setex(self._lease_key_prefix + itemkey, lease_secs,
+                           self._session)
         return item
 
     def error(self, value, msg=None):
@@ -117,19 +129,22 @@ class RedisWQ(object):
         Optionally provide error message `msg`.
         """
         itemkey = self._itemkey(value)
-        if msg is None: msg = 'unknown error'
+        if msg is None:
+            msg = 'unknown error'
         logger.info("{}: Trying to move '{}' to '{}'".format(msg, itemkey,
-                                                             self._error_q_key))
+                                                             self._error_q_key)
+                    )
         exit_code = self._db.lrem(self._processing_q_key, 0, value)
         logger.debug("exit code: {}".format(exit_code))
         if exit_code == 0:
-            logger.error("Could not find '{}' in '{}'".format(itemkey,
-                                                             self._processing_q_key))
+            logger.error("Could not find '{}' in '{}'".format(
+                itemkey, self._processing_q_key))
         else:
             len_errors = self._db.lpush(self._error_q_key, value)
             len_msgs = self._db.lpush(self._error_messages_q_key,
                                       msg.encode('utf-8'))
-            logger.debug("Moved '{}' to '{}'".format(itemkey, self._error_q_key))
+            logger.debug("Moved '{}' to '{}'".format(itemkey,
+                                                     self._error_q_key))
             assert len_errors == len_msgs
 
     def complete(self, value):
@@ -140,8 +155,10 @@ class RedisWQ(object):
         of what happened.
         """
         self._db.lrem(self._processing_q_key, 0, value)
-        # If we crash here, then the GC code will try to move the value, but it will
-        # not be here, which is fine.  So this does not need to be a transaction.
+        # If we crash here, then the GC code will try to move the value,
+        # but it will
+        # not be here, which is fine.  So this does not need to be a
+        # transaction.
         itemkey = self._itemkey(value)
         self._db.delete(self._lease_key_prefix + itemkey, self._session)
 
@@ -150,9 +167,14 @@ class RedisWQ(object):
 
 # TODO(etune): finish code to GC expired leases, and call periodically
 #  e.g. each time lease times out.
-# edit: each leased item generates a leased_key dicom_folders:leased_by_session:item_key
-# with the value of the session. One could periodically check if all items in the processing q
-# have a leased_key. If not, these are expired leases and should be put back into the main q
+# edit: each leased item generates a leased_key dicom_folders:leased_
+# by_session:item_key
+# with the value of the session. One could periodically check if all items in
+# the processing q
+# have a leased_key. If not, these are expired leases and should be put back
+# into the main q
 
-# TODO: error handling, introduce error queue: when a known error during processing occurs, put item in
-# error queue and remove it form processing queue (`complete()`). Manually check error queue
+# TODO: error handling, introduce error queue: when a known error
+# during processing occurs, put item in
+# error queue and remove it form processing queue (`complete()`).
+# Manually check error queue
