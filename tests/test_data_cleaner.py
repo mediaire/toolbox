@@ -23,6 +23,7 @@ class TestUtils(unittest.TestCase):
 
         def current_size():
             return 1024
+
         def creation_time(folder):
             """mock creation time so first folder is 10 seconds old and second is 20 seconds old"""
             return int(current_time - 10) if folder == sub_folder_1 else int(current_time - 20)
@@ -31,10 +32,10 @@ class TestUtils(unittest.TestCase):
             mocked_current_size.side_effect = current_size
             with mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
                 mocked_creation_time.side_effect = creation_time
-            
+
                 # remove folders older than 15 seconds
                 mocked_data_cleaner = DataCleaner(temp_folder, 1024 * 1024, 15)
-                
+
                 removed = mocked_data_cleaner.clean_up(dry_run=True)
                 self.assertTrue(len(removed) == 1)
                 self.assertEqual(removed[0], sub_folder_2)
@@ -62,11 +63,11 @@ class TestUtils(unittest.TestCase):
             mocked_current_size.side_effect = current_size
             with mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
                 mocked_creation_time.side_effect = creation_time
-        
+
                 # remove folders older than 1 day
                 # and remove old folders as long as total size exceed 1 MB
                 mock_cleaner = DataCleaner(temp_folder, 1024, 60 * 60 * 24)
-        
+
                 removed = mock_cleaner.clean_up(dry_run=False)
                 self.assertTrue(len(removed) == 1)
                 self.assertEqual(removed[0], sub_folder_2)
@@ -87,10 +88,10 @@ class TestUtils(unittest.TestCase):
 
             removed = mock_cleaner.clean_up(dry_run=True)
             self.assertTrue(removed == [])
-    
+
             mock_cleaner = DataCleaner(temp_folder, -1, -1)
-    
+
             removed = mock_cleaner.clean_up(dry_run=True)
             self.assertTrue(removed == [])
-    
+
             shutil.rmtree(temp_folder)

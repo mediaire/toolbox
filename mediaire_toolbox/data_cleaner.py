@@ -45,7 +45,7 @@ class DataCleaner:
         logger.debug('Current time is %s' % current_time)
         for folder in sorted(self.list_sub_folders(self.base_folder),
                              key=self.creation_time):
-            # this already returns all subfolders sorted from older to newer
+            # this already returns all sub-folders sorted from older to newer
             if not os.path.isdir(folder):
                 # ignoring files by now
                 continue
@@ -67,7 +67,7 @@ class DataCleaner:
             if not delete \
                     and self.max_folder_size > 0 \
                     and current_size > self.max_folder_size:
-                # base_folder is still too big, let's delete this base_folder
+                # base_folder is still too big, let's delete this sub folder
                 delete = True
                 logger.info(
                     "Current total size is too big (%s bytes), need to delete some data to free up space" % current_size)
