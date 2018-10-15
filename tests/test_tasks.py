@@ -47,7 +47,8 @@ class TestTask(unittest.TestCase):
 class TestDicomTask(unittest.TestCase):
 
     def setUp(self):
-        self.task_d = {"tag": "spm_lesion",
+        self.task_d = {"t_id": 1, 
+                       "tag": "spm_lesion",
                        "output": {"foo": "bar"},
                        "timestamp": 1530368396,
                        "data": {"dicom_info":
@@ -71,6 +72,7 @@ class TestDicomTask(unittest.TestCase):
         task = DicomTask().read_dict(self.task_d)
         new_tag = 'child_task'
         child_task = task.create_child(new_tag)
+        self.assertEqual(child_task.t_id, task.t_id)
         self.assertEqual(child_task.tag, new_tag)
         self.assertEqual(child_task.timestamp, task.timestamp)
         self.assertNotEqual(child_task.update_timestamp,

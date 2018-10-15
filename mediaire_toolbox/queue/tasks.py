@@ -6,18 +6,21 @@ from copy import deepcopy
 class Task(object):
     """Defines task objects that can be handled by the task manager."""
 
-    def __init__(self, tag=None, input=None, output=None, data=None,
+    def __init__(self, t_id=None, tag=None, input=None, output=None, data=None,
                  timestamp=None, update_timestamp=None):
         """Initializes the Task object.
 
         Parameters
         ----------
+        t_id: int
+            transaction id this task belongs to
         tag: str
             String specifying the task. Unique for each task.
         input: object
         output: object
         data: dict
         """
+        self.t_id = t_id
         self.tag = tag
         self.input = input
         self.output = output
@@ -35,7 +38,8 @@ class Task(object):
                 'update_timestamp': self.update_timestamp,
                 'input': self.input,
                 'output': self.output,
-                'data': self.data}
+                'data': self.data,
+                't_id': self.t_id}
 
     def to_bytes(self):
         return json.dumps(self.to_dict()).encode('utf-8')
@@ -43,11 +47,12 @@ class Task(object):
     def read_dict(self, d):
         tag = d['tag']
         timestamp = d['timestamp']
+        t_id = d['t_id']
         update_timestamp = d.get('update_timestamp', None)
-        input = d.get('input', None)
+        input_ = d.get('input', None)
         output = d.get('output', None)
         data = d.get('data', None)
-        self.__init__(tag=tag, input=input, output=output, data=data,
+        self.__init__(t_id=t_id, tag=tag, input=input_, output=output, data=data,
                       timestamp=timestamp, update_timestamp=update_timestamp)
         return self
 
@@ -83,11 +88,13 @@ class Task(object):
 class DicomTask(Task):
     """Dicom specific task"""
 
-    def __init__(self, tag=None, input=None, output=None, dicom_info=None,
+    def __init__(self, t_id=None, tag=None, input=None, output=None, dicom_info=None,
                  data=None, timestamp=None, update_timestamp=None):
         """Initializes the Task object.
         Parameters
         ----------
+        t_id: int
+            transaction id this task belongs to
         tag: str
             String specifying the task. Unique for each task.
         input
@@ -102,7 +109,7 @@ class DicomTask(Task):
                 data = {'dicom_info': dicom_info}
             else:
                 data['dicom_info'] = dicom_info
-        super().__init__(tag, input, output, data, timestamp, update_timestamp)
+        super().__init__(t_id, tag, input, output, data, timestamp, update_timestamp)
 
     def get_subject_name(self):
         # the T1 header should always be there
