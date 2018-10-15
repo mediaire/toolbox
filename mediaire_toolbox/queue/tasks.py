@@ -46,8 +46,8 @@ class Task(object):
 
     def read_dict(self, d):
         tag = d['tag']
-        timestamp = d['timestamp']
-        t_id = d['t_id']
+        timestamp = d['timestamp']        
+        t_id = d.get('t_id', None)
         update_timestamp = d.get('update_timestamp', None)
         input_ = d.get('input', None)
         output = d.get('output', None)
