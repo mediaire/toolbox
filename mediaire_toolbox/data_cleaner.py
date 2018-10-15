@@ -22,7 +22,8 @@ class DataCleaner:
         self.base_folder = folder
         self.max_folder_size = max_folder_size
         self.max_data_seconds = max_data_seconds
-        logger.info("Instantiated a DataCleaner on folder {%s} with max foldersize={%s} and max data seconds={%s}" %
+        logger.info("""Instantiated a DataCleaner on folder {%s} with max 
+                    foldersize={%s} and max data seconds={%s}""" %
                     (folder, max_folder_size, max_data_seconds))
 
     def current_size(self):
@@ -53,9 +54,8 @@ class DataCleaner:
                 folder, self.creation_time(folder)))
             delete = False
 
-            if self.max_data_seconds > 0 \
-                    and (current_time - self.creation_time(folder)) > \
-                    self.max_data_seconds:
+            if (self.max_data_seconds > 0 and 
+               (current_time - self.creation_time(folder)) > self.max_data_seconds):
                 # base_folder is too old, must be deleted
                 delete = True
                 logger.info(
@@ -64,9 +64,8 @@ class DataCleaner:
 
             current_size = self.current_size()
 
-            if not delete \
-                    and self.max_folder_size > 0 \
-                    and current_size > self.max_folder_size:
+            if (not delete and self.max_folder_size > 0 
+                and current_size > self.max_folder_size):
                 # base_folder is still too big, let's delete this sub folder
                 delete = True
                 logger.info(

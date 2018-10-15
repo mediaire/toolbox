@@ -25,12 +25,13 @@ class TestUtils(unittest.TestCase):
             return 1024
 
         def creation_time(folder):
-            """mock creation time so first folder is 10 seconds old and second is 20 seconds old"""
+            # mock creation time so first folder is 10 seconds old and second
+            # is 20 seconds old
             return int(current_time - 10) if folder == sub_folder_1 else int(current_time - 20)
 
-        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size:
-            mocked_current_size.side_effect = current_size
-            with mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
+        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size, \
+             mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
+                mocked_current_size.side_effect = current_size
                 mocked_creation_time.side_effect = creation_time
 
                 # remove folders older than 15 seconds
@@ -59,9 +60,9 @@ class TestUtils(unittest.TestCase):
         def creation_time(folder):
             return int(current_time - 10) if folder == sub_folder_1 else int(current_time - 20)
 
-        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size:
-            mocked_current_size.side_effect = current_size
-            with mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
+        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size, \
+             mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
+                mocked_current_size.side_effect = current_size
                 mocked_creation_time.side_effect = creation_time
 
                 # remove folders older than 1 day
