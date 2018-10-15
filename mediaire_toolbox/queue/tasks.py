@@ -26,6 +26,9 @@ class Task(object):
         self.data = data
         # self.update = None
 
+    def to_json(self):
+        return json.dumps(self)
+    
     def to_dict(self):
         return {'tag': self.tag,
                 'timestamp': self.timestamp,
