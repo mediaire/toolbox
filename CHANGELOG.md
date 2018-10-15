@@ -1,8 +1,9 @@
 # Changelog
 
 
-## [unreleased] - 2018-XX-XX
+## [0.7.0] - 2018-10-15
 * add linter
+* data cleaner - cleans folders based on size and time
 
 ## [0.6.0] - 2018-07-02
 * add error queue
