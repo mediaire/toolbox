@@ -13,5 +13,7 @@ setup(
     install_requires=[
         'nose',
         'redis',
+	'SQLAlchemy',
+	'jsonpickle'
     ]
 )
