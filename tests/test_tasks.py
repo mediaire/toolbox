@@ -58,7 +58,12 @@ class TestDicomTask(unittest.TestCase):
                                      }
                                 }
                        }
-
+        
+    def test_to_json(self):
+        # shouldn't raise "class is not JSON serializable" error
+        task = DicomTask().read_dict(self.task_d)
+        task.to_json()
+    
     def test_read_dict(self):
         task = DicomTask().read_dict(self.task_d)
         self.assertEqual(task.data['dicom_info']['t1']['path'], "path")

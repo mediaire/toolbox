@@ -1,5 +1,7 @@
 import time
 import json
+import jsonpickle
+
 from copy import deepcopy
 
 
@@ -30,7 +32,7 @@ class Task(object):
         # self.update = None
 
     def to_json(self):
-        return json.dumps(self)
+        return jsonpickle.encode(self)
     
     def to_dict(self):
         return {'tag': self.tag,
