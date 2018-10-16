@@ -40,7 +40,8 @@ class QueueDaemon(ABC):
             A unique identifier for this daemon, will be used for logging
         config:
             A configuration dictionary with all the necessary extra parameters
-            for this daemon
+            for this daemon. 'data_dir' is necessary for running the testing
+            transaction DB which uses SQLite.
         """
         self.input_queue = input_queue
         self.result_queue = result_queue
@@ -61,7 +62,7 @@ class QueueDaemon(ABC):
     @abstractmethod
     def process_task(self, task):
         """
-        Busines logic to be implemented by the daemon, receiving an already
+        Business logic to be implemented by the daemon, receiving an already
         deserialized task here.
         """
         pass

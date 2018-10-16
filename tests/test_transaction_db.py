@@ -111,3 +111,10 @@ class TestTransactionDB(unittest.TestCase):
         engine = self._get_temp_db(5)
         t_db = TransactionDB(engine)
         t_db.get_transaction(1)
+        
+        
+    def test_json_serialization(self):
+        t = self._get_test_transaction()
+        t.start_date = datetime.utcnow()
+        t.end_date = datetime.utcnow()
+        t.to_dict()

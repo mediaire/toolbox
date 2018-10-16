@@ -7,16 +7,17 @@ Provide a common interface for all our components to do logging
 
 
 def basic_logging_conf():
-    """
-    Will set up a basic logging configuration using basicConfig()
-    """
+    """Will set up a basic logging configuration using basicConfig()"""
+    return basic_logging_conf(logging.INFO)
+
+
+def basic_logging_conf_with_level(level):
     logging.basicConfig(format='%(asctime)s %(levelname)s %(module)s:%(lineno)s '
-                               '%(message)s', level=logging.INFO)
+                               '%(message)s', level=level)
 
 
 def logger_for_transaction(name: str, t_id: int):
-    """
-    Provide a specific default_logger for a transaction. The provided transaction id
+    """Provide a specific default_logger for a transaction. The provided transaction id
     will always be logged with every message.
     
     Parameters
