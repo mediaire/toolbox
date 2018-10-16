@@ -86,7 +86,7 @@ class RedisWQ(object):
     def _itemkey(self, item):
         """Returns a string that uniquely identifies an item (bytes)."""
         return hashlib.sha224(item).hexdigest()
-
+    
     def _lease_exists(self, item):
         """True if a lease on 'item' exists."""
         return self._db.exists(self._lease_key_prefix + self._itemkey(item))
@@ -161,6 +161,15 @@ class RedisWQ(object):
         # transaction.
         itemkey = self._itemkey(value)
         self._db.delete(self._lease_key_prefix + itemkey, self._session)
+
+    @staticmethod
+    def get_all_queues_from_config(appconfig: dict, redis_args: dict):
+        queues = {
+            q_identifier: RedisWQ(q_key, **redis_args) 
+            for q_identifier, q_key in appconfig['shared']['queues'].items()
+        }
+        return queues
+
 
 # TODO: add functions to clean up all keys associated with "name" when
 # processing is complete.
