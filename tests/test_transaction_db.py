@@ -2,6 +2,7 @@ import unittest
 import tempfile
 import shutil
 import logging
+import json
 import os
 
 from datetime import datetime
@@ -115,6 +116,8 @@ class TestTransactionDB(unittest.TestCase):
         
     def test_json_serialization(self):
         t = self._get_test_transaction()
+        t.task_state = TaskState.completed
         t.start_date = datetime.utcnow()
         t.end_date = datetime.utcnow()
-        t.to_dict()
+        self.assertTrue(t.to_dict()['task_state'] == 'completed')
+        json.dumps(t.to_dict())

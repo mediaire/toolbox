@@ -38,7 +38,7 @@ class Transaction(Base):
                     if self.start_date else None,
                  'end_date': self.end_date.strftime("%Y-%m-%d %H:%M:%S") 
                     if self.end_date else None,
-                 'task_state': self.task_state,
+                 'task_state': self.task_state.name if self.task_state else None,
                  'processing_state': self.processing_state,
                  'last_message': self.last_message,
                  'error': self.error }
