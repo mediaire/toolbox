@@ -8,7 +8,7 @@ Provide a common interface for all our components to do logging
 
 def basic_logging_conf():
     """Will set up a basic logging configuration using basicConfig()"""
-    return basic_logging_conf(logging.INFO)
+    return basic_logging_conf_with_level(logging.INFO)
 
 
 def basic_logging_conf_with_level(level):
