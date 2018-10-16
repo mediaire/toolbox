@@ -5,7 +5,7 @@ import os
 import logging
 
 
-logger = logging.getLogger(__name__)
+default_logger = logging.getLogger(__name__)
 
 """
 Utility class for monitoring the disk usage in a folder and automatically 
@@ -22,7 +22,7 @@ class DataCleaner:
         self.base_folder = folder
         self.max_folder_size = max_folder_size
         self.max_data_seconds = max_data_seconds
-        logger.info("""Instantiated a DataCleaner on folder {%s} with max 
+        default_logger.info("""Instantiated a DataCleaner on folder {%s} with max 
                     foldersize={%s} and max data seconds={%s}""" %
                     (folder, max_folder_size, max_data_seconds))
 
@@ -43,14 +43,14 @@ class DataCleaner:
     def clean_up(self, dry_run=False):
         removed = []
         current_time = int(time.time())
-        logger.debug('Current time is %s' % current_time)
+        default_logger.debug('Current time is %s' % current_time)
         for folder in sorted(self.list_sub_folders(self.base_folder),
                              key=self.creation_time):
             # this already returns all sub-folders sorted from older to newer
             if not os.path.isdir(folder):
                 # ignoring files by now
                 continue
-            logger.debug('Considering sub folder %s with creation time %s' % (
+            default_logger.debug('Considering sub folder %s with creation time %s' % (
                 folder, self.creation_time(folder)))
             delete = False
 
@@ -58,7 +58,7 @@ class DataCleaner:
                (current_time - self.creation_time(folder)) > self.max_data_seconds):
                 # base_folder is too old, must be deleted
                 delete = True
-                logger.info(
+                default_logger.info(
                     'Sub-folder is older than %s seconds, will delete' %
                     self.max_data_seconds)
 
@@ -68,13 +68,13 @@ class DataCleaner:
                 and current_size > self.max_folder_size):
                 # base_folder is still too big, let's delete this sub folder
                 delete = True
-                logger.info(
+                default_logger.info(
                     "Current total size is too big (%s bytes), need to delete some data to free up space" % current_size)
             if delete:
                 removed.append(folder)
                 if dry_run:
-                    logger.info('(dry-run) Would remove folder [%s]' % folder)
+                    default_logger.info('(dry-run) Would remove folder [%s]' % folder)
                 else:
-                    logger.info('Removing folder [%s]' % folder)
+                    default_logger.info('Removing folder [%s]' % folder)
                     shutil.rmtree(folder)
         return removed

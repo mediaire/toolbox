@@ -12,7 +12,7 @@ from mediaire_toolbox.transaction_db.model import TaskState, Transaction
 
 logging.basicConfig(format='%(asctime)s %(levelname)s  %(module)s:%(lineno)s '
                     '%(message)s', level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+default_logger = logging.getLogger(__name__)
 
 
 class TestTransactionDB(unittest.TestCase):

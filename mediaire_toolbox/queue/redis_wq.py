@@ -7,7 +7,7 @@ import uuid
 import hashlib
 import logging
 
-logger = logging.getLogger(__name__)
+default_logger = logging.getLogger(__name__)
 
 
 class RedisWQ(object):
@@ -117,7 +117,7 @@ class RedisWQ(object):
             # see no lease
             # for this item a later return it to the main queue.
             itemkey = self._itemkey(item)
-            logger.info('{} -> {}'.format(self._lease_key_prefix + itemkey,
+            default_logger.info('{} -> {}'.format(self._lease_key_prefix + itemkey,
                                           self._session))
             self._db.setex(self._lease_key_prefix + itemkey, lease_secs,
                            self._session)
@@ -131,19 +131,19 @@ class RedisWQ(object):
         itemkey = self._itemkey(value)
         if msg is None:
             msg = 'unknown error'
-        logger.info("{}: Trying to move '{}' to '{}'".format(msg, itemkey,
+        default_logger.info("{}: Trying to move '{}' to '{}'".format(msg, itemkey,
                                                              self._error_q_key)
                     )
         exit_code = self._db.lrem(self._processing_q_key, 0, value)
-        logger.debug("exit code: {}".format(exit_code))
+        default_logger.debug("exit code: {}".format(exit_code))
         if exit_code == 0:
-            logger.error("Could not find '{}' in '{}'".format(
+            default_logger.error("Could not find '{}' in '{}'".format(
                 itemkey, self._processing_q_key))
         else:
             len_errors = self._db.lpush(self._error_q_key, value)
             len_msgs = self._db.lpush(self._error_messages_q_key,
                                       msg.encode('utf-8'))
-            logger.debug("Moved '{}' to '{}'".format(itemkey,
+            default_logger.debug("Moved '{}' to '{}'".format(itemkey,
                                                      self._error_q_key))
             assert len_errors == len_msgs
 
