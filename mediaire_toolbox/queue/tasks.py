@@ -42,8 +42,11 @@ class Task(object):
                 't_id': self.t_id,
                 'error': self.error}
 
+    def to_json(self):
+        return json.dumps(self.to_dict())
+    
     def to_bytes(self):
-        return json.dumps(self.to_dict()).encode('utf-8')
+        return self.to_json().encode('utf-8')
 
     def read_dict(self, d):
         tag = d['tag']

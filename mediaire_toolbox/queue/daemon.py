@@ -69,7 +69,7 @@ class QueueDaemon(ABC):
                     "Error processing task in %s" % self.daemon_name)
                 tb = traceback.format_exc()
                 msg = "{} --> in '{}': {}".format(e, __file__, tb)
-                if task.t_id:
+                if task.t_id and self.result_queue:
                     # send the task back to the task manager with an error
                     # so the task manager can decide what to do with it
                     # for example executing a subflow or simply marking the
