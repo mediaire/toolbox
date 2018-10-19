@@ -60,6 +60,8 @@ class QueueDaemon(ABC):
         item = self.input_queue.lease(
             lease_secs=self.lease_secs, block=True)
         try:
+            # TODO Make this class a parameter for better generalization
+            # how to do reflection in python?
             task = tasks.DicomTask().read_bytes(item)
             try:
                 self.process_task(task)

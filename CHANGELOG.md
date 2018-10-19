@@ -1,5 +1,10 @@
 # Changelog
 
+## [unreleased] - 2018-10-19
+
+* TransactionsDB: a way of tracking cross-services 'transactions' in our system
+* reusable logging primitives
+* daemon base class
 
 ## [0.7.0] - 2018-10-15
 * add linter
