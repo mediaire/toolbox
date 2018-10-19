@@ -1,7 +1,6 @@
 import unittest
 import tempfile
 import shutil
-import logging
 import json
 import os
 
@@ -10,11 +9,6 @@ from sqlalchemy import create_engine
 
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
 from mediaire_toolbox.transaction_db.model import TaskState, Transaction
-
-logging.basicConfig(format='%(asctime)s %(levelname)s  %(module)s:%(lineno)s '
-                    '%(message)s', level=logging.DEBUG)
-default_logger = logging.getLogger(__name__)
-
 
 class TestTransactionDB(unittest.TestCase):
 

@@ -9,7 +9,7 @@ class Task(object):
     """Defines task objects that can be handled by the task manager."""
 
     def __init__(self, t_id=None, tag=None, input=None, output=None, data=None,
-                 timestamp=None, update_timestamp=None):
+                 timestamp=None, update_timestamp=None, error=None):
         """Initializes the Task object.
 
         Parameters
@@ -29,11 +29,9 @@ class Task(object):
         self.timestamp = timestamp or int(time.time())
         self.update_timestamp = update_timestamp
         self.data = data
+        self.error = error
         # self.update = None
 
-    def to_json(self):
-        return jsonpickle.encode(self)
-    
     def to_dict(self):
         return {'tag': self.tag,
                 'timestamp': self.timestamp,
@@ -41,7 +39,8 @@ class Task(object):
                 'input': self.input,
                 'output': self.output,
                 'data': self.data,
-                't_id': self.t_id}
+                't_id': self.t_id,
+                'error': self.error}
 
     def to_bytes(self):
         return json.dumps(self.to_dict()).encode('utf-8')
@@ -54,8 +53,10 @@ class Task(object):
         input_ = d.get('input', None)
         output = d.get('output', None)
         data = d.get('data', None)
+        error = d.get('error', None)
         self.__init__(t_id=t_id, tag=tag, input=input_, output=output, data=data,
-                      timestamp=timestamp, update_timestamp=update_timestamp)
+                      timestamp=timestamp, update_timestamp=update_timestamp,
+                      error=error)
         return self
 
     def read_bytes(self, bytestring):
@@ -91,7 +92,7 @@ class DicomTask(Task):
     """Dicom specific task"""
 
     def __init__(self, t_id=None, tag=None, input=None, output=None, dicom_info=None,
-                 data=None, timestamp=None, update_timestamp=None):
+                 data=None, timestamp=None, update_timestamp=None, error=None):
         """Initializes the Task object.
         Parameters
         ----------

@@ -1,13 +1,10 @@
 import logging
 import traceback
-import os
 
 from abc import ABC, abstractmethod
-from sqlalchemy import create_engine
 
 from mediaire_toolbox.queue.redis_wq import RedisWQ
 from mediaire_toolbox.queue import tasks
-from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
 
 default_logger = logging.getLogger(__name__)
 
@@ -40,8 +37,7 @@ class QueueDaemon(ABC):
             A unique identifier for this daemon, will be used for logging
         config:
             A configuration dictionary with all the necessary extra parameters
-            for this daemon. 'data_dir' is necessary for running the testing
-            transaction DB which uses SQLite.
+            for this daemon.
         """
         self.input_queue = input_queue
         self.result_queue = result_queue
@@ -49,15 +45,6 @@ class QueueDaemon(ABC):
         self.daemon_name = daemon_name
         self.config = config
         self.stopped = False
-        # =====================================================================
-        # TODO Provide a production engine as well, SQLITE only to be used for
-        # testing (multiple processes can't write to it)
-        # =====================================================================
-        uri = "sqlite:///" + os.path.join(config['data_dir'], 't.db') + \
-            '?check_same_thread=False'
-        default_logger.info('Creating SQL connection for TransactionDB on %s' % uri)
-        engine = create_engine(uri)
-        self.transaction_db = TransactionDB(engine)
 
     @abstractmethod
     def process_task(self, task):
@@ -83,12 +70,21 @@ class QueueDaemon(ABC):
                 tb = traceback.format_exc()
                 msg = "{} --> in '{}': {}".format(e, __file__, tb)
                 if task.t_id:
-                    self.transaction_db.set_failed(task.t_id, msg)
-                self.input_queue.error(item, msg=msg)
+                    # send the task back to the task manager with an error
+                    # so the task manager can decide what to do with it
+                    # for example executing a subflow or simply marking the
+                    # transaction as failed in db
+                    task.error = msg
+                    self.result_queue.put(task.to_bytes())
+                else:
+                    # if the task doesn't yet have a transactionid, default
+                    # to error queue
+                    self.input_queue.error(item, msg=msg)
         except Exception as e:
             default_logger.exception(
                 "Operating error or error deserializing task object")
             tb = traceback.format_exc()
+            # default to error queue
             self.input_queue.error(item,
                                    msg="""{} --> in '{}': {}""".format(e, __file__, tb))
 

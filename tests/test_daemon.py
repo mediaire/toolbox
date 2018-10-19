@@ -36,6 +36,9 @@ class MockQueue(RedisWQ):
     def error(self, value, msg=None):
         self.error_msg = msg
 
+    def put(self, item):
+        self.put_item = item
+     
     def complete(self, item):
         if item == self.serialized_task:
             self.completed = True
@@ -70,7 +73,7 @@ class TestDaemon(unittest.TestCase):
         self.assertFalse(self.input_queue.completed)
         self.assertTrue(self.input_queue.error_msg)
 
-    def test_daemon_processing_error(self):
+    def test_daemon_processing_error_with_t_id(self):
         self.foo_daemon = FooFailingDaemon(self.input_queue,
                                            self.result_queue,
                                            60 * 30,
@@ -78,13 +81,9 @@ class TestDaemon(unittest.TestCase):
                                            {'data_dir': self.data_dir})
 
         self.transaction_failed = False
-        
-        def set_failed(t_id, msg):
-            self.transaction_failed = True
-            
-        self.foo_daemon.transaction_db.set_failed = set_failed
         self.foo_daemon.run_once()
         
         self.assertFalse(self.input_queue.completed)
-        self.assertTrue(self.input_queue.error_msg)
-        self.assertTrue(self.transaction_failed)
+        self.assertFalse(self.input_queue.error_msg)
+        self.assertTrue(self.result_queue.put_item and 
+                        Task().read_bytes(self.result_queue.put_item).error)

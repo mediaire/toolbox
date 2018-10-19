@@ -9,7 +9,8 @@ class TestTask(unittest.TestCase):
     def setUp(self):
         self.task = Task(tag='tag',
                          input={'t1': 'foo', 't2': 'bar'},
-                         output={'out': 'foo'})
+                         output={'out': 'foo'},                         
+                         error="an error")
 
     def test_to_dict(self):
         d = self.task.to_dict()
@@ -18,6 +19,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(d['input']['t1'], 'foo')
         self.assertEqual(d['output']['out'], 'foo')
         self.assertEqual(d['tag'], 'tag')
+        self.assertEqual(d['error'], 'an error')
 
     def test_from_and_to_bytes(self):
         bytes_ = self.task.to_bytes()
@@ -58,11 +60,6 @@ class TestDicomTask(unittest.TestCase):
                                      }
                                 }
                        }
-        
-    def test_to_json(self):
-        # shouldn't raise "class is not JSON serializable" error
-        task = DicomTask().read_dict(self.task_d)
-        task.to_json()
     
     def test_read_dict(self):
         task = DicomTask().read_dict(self.task_d)
@@ -99,6 +96,6 @@ class TestDicomTask(unittest.TestCase):
         task = DicomTask().read_dict(self.task_d)
         new_tag = 'child_task'
         child_task = task.create_child(new_tag)
-        name = task.get_subject_name()
+        name = child_task.get_subject_name()
         self.assertEqual(name, 'Max')
 

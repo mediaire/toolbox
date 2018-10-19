@@ -1,5 +1,4 @@
 import datetime
-import jsonpickle
 
 from sqlalchemy import Column, Integer, String, Sequence, DateTime, Date, Enum
 from sqlalchemy.ext.declarative import declarative_base
