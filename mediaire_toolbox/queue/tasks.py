@@ -115,7 +115,7 @@ class DicomTask(Task):
                 data = {'dicom_info': dicom_info}
             else:
                 data['dicom_info'] = dicom_info
-        super().__init__(t_id, tag, input, output, data, timestamp, update_timestamp)
+        super().__init__(t_id, tag, input, output, data, timestamp, update_timestamp, error)
 
     def get_subject_name(self):
         # the T1 header should always be there
