@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from mediaire_toolbox.queue.redis_wq import RedisWQ
 from mediaire_toolbox.queue import tasks
 
-default_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 """
@@ -55,7 +55,7 @@ class QueueDaemon(ABC):
         pass
 
     def run_once(self):
-        default_logger.info('Waiting for items from queue {}'.format(
+        logger.info('Waiting for items from queue {}'.format(
             self.input_queue._main_q_key))
         item = self.input_queue.lease(
             lease_secs=self.lease_secs, block=True)
@@ -63,32 +63,35 @@ class QueueDaemon(ABC):
             # TODO Make this class a parameter for better generalization
             # how to do reflection in python?
             task = tasks.DicomTask().read_bytes(item)
-            try:
-                self.process_task(task)
-                self.input_queue.complete(item)
-            except Exception as e:
-                default_logger.exception(
-                    "Error processing task in %s" % self.daemon_name)
-                tb = traceback.format_exc()
-                msg = "{} --> in '{}': {}".format(e, __file__, tb)
-                if task.t_id and self.result_queue:
-                    # send the task back to the task manager with an error
-                    # so the task manager can decide what to do with it
-                    # for example executing a subflow or simply marking the
-                    # transaction as failed in db
-                    task.error = msg
-                    self.result_queue.put(task.to_bytes())
-                else:
-                    # if the task doesn't yet have a transactionid, default
-                    # to error queue
-                    self.input_queue.error(item, msg=msg)
         except Exception as e:
-            default_logger.exception(
+            logger.exception(
                 "Operating error or error deserializing task object")
             tb = traceback.format_exc()
             # default to error queue
             self.input_queue.error(item,
-                                   msg="""{} --> in '{}': {}""".format(e, __file__, tb))
+                                   msg="{} --> in '{}': {}"
+                                       "".format(e, __file__, tb))
+            return
+
+        try:
+            self.process_task(task)
+            self.input_queue.complete(item)
+        except Exception as e:
+            logger.exception(
+                "Error processing task in %s" % self.daemon_name)
+            tb = traceback.format_exc()
+            msg = "{} --> in '{}': {}".format(e, __file__, tb)
+            if task.t_id and self.result_queue:
+                # send the task back to the task manager with an error
+                # so the task manager can decide what to do with it
+                # for example executing a subflow or simply marking the
+                # transaction as failed in db
+                task.error = msg
+                self.result_queue.put(task.to_bytes())
+            else:
+                # if the task doesn't yet have a transactionid, default
+                # to error queue
+                self.input_queue.error(item, msg=msg)
 
     def run(self):
         while not self.stopped:

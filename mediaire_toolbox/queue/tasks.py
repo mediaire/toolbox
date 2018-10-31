@@ -1,6 +1,5 @@
 import time
 import json
-import jsonpickle
 
 from copy import deepcopy
 
@@ -21,6 +20,12 @@ class Task(object):
         input: object
         output: object
         data: dict
+        timestamp: float
+            Timestamp of task creation from`time.time()`
+        update_timestamp: float
+            Timestamp of task update (via `create_child()`) from `time.time()`
+        error: str
+            a serialized error string in case the task failed while executing
         """
         self.t_id = t_id
         self.tag = tag

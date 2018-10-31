@@ -114,4 +114,4 @@ class TransactionDB:
 class TransactionDBException(Exception):
 
     def __init__(self, msg):
-        super(TransactionDBException, self).__init__(self, msg)
+        super().__init__(self, msg)
