@@ -15,14 +15,14 @@ class Transaction(Base):
     """A general transaction, this could be used by any other pipeline"""
     transaction_id = Column(Integer, Sequence(
         'transaction_id'), primary_key=True)
-    study_id = Column(String(256))
-    patient_id = Column(String(128))
-    name = Column(String(64))
+    study_id = Column(String(255))
+    patient_id = Column(String(255))
+    name = Column(String(255))
     birth_date = Column(Date())
     start_date = Column(DateTime(), default=datetime.datetime.utcnow)
     end_date = Column(DateTime())
     task_state = Column(Enum(TaskState))
-    processing_state = Column(String(64))
+    processing_state = Column(String(255))
     last_message = Column(String)
     error = Column(String())
 

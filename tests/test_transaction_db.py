@@ -30,7 +30,6 @@ class TestTransactionDB(unittest.TestCase):
         t = Transaction()
         # we only need to fill metadata before creating a new transaction
         t.name = 'Pere'
-        t.surname = 'Ferrera'
         t.patient_id = '1'
         t.study_id = 'S1'
         t.birth_date = datetime(1982, 10, 29)
@@ -46,7 +45,6 @@ class TestTransactionDB(unittest.TestCase):
         tr_2 = t_db.get_transaction(t_id)
 
         self.assertEqual(tr_1.name, tr_2.name)
-        self.assertEqual(tr_1.surname, tr_2.surname)
         self.assertEqual(tr_1.patient_id, tr_2.patient_id)
         self.assertEqual(tr_1.study_id, tr_2.study_id)
         self.assertTrue(tr_2.start_date)
