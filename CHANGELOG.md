@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - 2018-10-19
+## [0.8.0] - 2018-11-01
 
 * TransactionsDB: a way of tracking cross-services 'transactions' in our system
 * reusable logging primitives
