@@ -9,7 +9,8 @@ class TestTask(unittest.TestCase):
     def setUp(self):
         self.task = Task(tag='tag',
                          input={'t1': 'foo', 't2': 'bar'},
-                         output={'out': 'foo'})
+                         output={'out': 'foo'},                         
+                         error="an error")
 
     def test_to_dict(self):
         d = self.task.to_dict()
@@ -18,6 +19,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(d['input']['t1'], 'foo')
         self.assertEqual(d['output']['out'], 'foo')
         self.assertEqual(d['tag'], 'tag')
+        self.assertEqual(d['error'], 'an error')
 
     def test_from_and_to_bytes(self):
         bytes_ = self.task.to_bytes()
@@ -47,7 +49,8 @@ class TestTask(unittest.TestCase):
 class TestDicomTask(unittest.TestCase):
 
     def setUp(self):
-        self.task_d = {"tag": "spm_lesion",
+        self.task_d = {"t_id": 1, 
+                       "tag": "spm_lesion",
                        "output": {"foo": "bar"},
                        "timestamp": 1530368396,
                        "data": {"dicom_info":
@@ -57,7 +60,7 @@ class TestDicomTask(unittest.TestCase):
                                      }
                                 }
                        }
-
+    
     def test_read_dict(self):
         task = DicomTask().read_dict(self.task_d)
         self.assertEqual(task.data['dicom_info']['t1']['path'], "path")
@@ -71,6 +74,7 @@ class TestDicomTask(unittest.TestCase):
         task = DicomTask().read_dict(self.task_d)
         new_tag = 'child_task'
         child_task = task.create_child(new_tag)
+        self.assertEqual(child_task.t_id, task.t_id)
         self.assertEqual(child_task.tag, new_tag)
         self.assertEqual(child_task.timestamp, task.timestamp)
         self.assertNotEqual(child_task.update_timestamp,
@@ -92,6 +96,6 @@ class TestDicomTask(unittest.TestCase):
         task = DicomTask().read_dict(self.task_d)
         new_tag = 'child_task'
         child_task = task.create_child(new_tag)
-        name = task.get_subject_name()
+        name = child_task.get_subject_name()
         self.assertEqual(name, 'Max')
 
