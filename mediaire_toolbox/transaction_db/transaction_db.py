@@ -63,6 +63,7 @@ class TransactionDB:
             db_version = SchemaVersion()
             db_version.schema_version = 1
             self.session.add(db_version)
+            self.session.commit()
             migrate(self.session, db_version, 1, errors_allowed=True)
         else:
             if db_version.schema_version < SCHEMA_VERSION:
