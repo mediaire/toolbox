@@ -29,7 +29,6 @@ def migrate(session, db_version, errors_allowed=False):
     for version in range(from_schema_version + 1, SCHEMA_VERSION + 1):
         logger.info("Applying database migration version %s" % version)
         try:
-            session.begin()
             """ ****** Version migrations code starts here """
             if version == 2:
                 session.sql("ALTER TABLE transactions ADD COLUMN task_progress INT DEFAULT 0")
