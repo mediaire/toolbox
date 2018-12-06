@@ -8,7 +8,7 @@ from mediaire_toolbox.transaction_db.model import SCHEMA_NAME, \
                                                   create_all
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox.logging import base_logging_conf
-
+from mediaire_toolbox.transaction_db import migrations
 import datetime
 
 base_logging_conf.basic_logging_conf()
@@ -29,10 +29,8 @@ def migrate(session, db_version, errors_allowed=False):
     for version in range(from_schema_version + 1, SCHEMA_VERSION + 1):
         logger.info("Applying database migration to version %s" % version)
         try:
-            """ ****** Version migrations code starts here """
-            if version == 2:
-                session.execute("ALTER TABLE transactions ADD COLUMN task_progress INT DEFAULT 0")
-            """ ****** Add new migration commands here """
+            for command in migrations.MIGRATIONS[version]:
+                session.execute(command)
             db_version.schema_version = version
             session.commit()
         except Exception as e:
@@ -103,7 +101,7 @@ class TransactionDB:
                        id_: int,
                        new_processing_state: str,
                        last_message: str,
-                       task_progress:int = 0
+                       task_progress:int=0
                        ):
         """to be called when a transaction changes from one processing task
         to another
