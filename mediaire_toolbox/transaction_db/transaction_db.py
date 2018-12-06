@@ -1,9 +1,46 @@
+import logging
 from sqlalchemy.orm import sessionmaker
 
-from mediaire_toolbox.transaction_db.model import Transaction, create_all
+from mediaire_toolbox.transaction_db.model import SCHEMA_NAME, \
+                                                  SCHEMA_VERSION, \
+                                                  Transaction, \
+                                                  SchemaVersion, \
+                                                  create_all
 from mediaire_toolbox.task_state import TaskState
+from mediaire_toolbox.logging import base_logging_conf
 
 import datetime
+
+base_logging_conf.basic_logging_conf()
+logger = logging.getLogger(__name__)
+
+
+def migrate(session, db_version, from_schema_version, errors_allowed=False):
+    """Implementing database migration using a similar idea to Flyway:
+    
+    https://flywaydb.org/getstarted/firststeps/commandline
+    
+    We store the schema version in the database and we apply migrations in
+    increasing order until we meet the current version.
+    There are plenty of schema migration tools but at this point it's not clear
+    if we need to add the complexity of such tools on our stack. So we do it
+    ourselves here."""
+    for version in range(from_schema_version + 1, SCHEMA_VERSION + 1):
+        logger.info("Applying database migration version %s" % version)
+        try:
+            session.begin()
+            """ ****** Version migrations code starts here """
+            if version == 2:
+                session.sql("ALTER TABLE transactions ADD COLUMN task_progress INT DEFAULT 0")
+            """ ****** Add new migration commands here """
+            db_version.schema_version = version
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            if not errors_allowed:
+                raise e 
+            else:
+                logger.warn("Ignoring error %s as we didn't know what the database version was." % str(e))
 
 
 class TransactionDB:
@@ -19,6 +56,17 @@ class TransactionDB:
         DBSession = sessionmaker(bind=engine)
         self.session = DBSession()
         create_all(engine)
+        db_version = self.session.query(SchemaVersion).get(SCHEMA_NAME)
+        if not db_version:
+            # first time we see the schemaversion table
+            # we don't know what's the current version
+            db_version = SchemaVersion()
+            db_version.schema_version = 1
+            self.session.add(db_version)
+            migrate(self.session, db_version, 1, errors_allowed=True)
+        else:
+            if db_version.schema_version < SCHEMA_VERSION:
+                migrate(db_version.schema_version)
 
     def create_transaction(self, t: Transaction) -> int:
         """will set the provided transaction object as queued, 

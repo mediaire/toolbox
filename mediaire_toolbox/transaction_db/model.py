@@ -7,6 +7,13 @@ from mediaire_toolbox.task_state import TaskState
 
 Base = declarative_base()
 
+"""Metadata that indicates the version of the schema in the database.
+We use our own schema migration routines. Don't forget to change the version
+number here if you add more fields to the Transaction object, and implement
+the migration SQL queries in transaction_db.migrate"""
+SCHEMA_NAME = "TRANSACTION"
+SCHEMA_VERSION = 1
+
 
 class Transaction(Base):
 
@@ -25,6 +32,7 @@ class Transaction(Base):
     processing_state = Column(String(255))
     last_message = Column(String)
     error = Column(String())
+    task_progress = Column(Integer, default=0)
 
     def to_dict(self):
         return { 'transaction_id': self.transaction_id,
@@ -40,6 +48,7 @@ class Transaction(Base):
                  'task_state': self.task_state.name if self.task_state else None,
                  'processing_state': self.processing_state,
                  'last_message': self.last_message,
+                 'task_progress': self.task_progress,
                  'error': self.error }
 
     def __repr__(self):
@@ -47,5 +56,13 @@ class Transaction(Base):
             self.transaction_id, self.patient_id, self.start_date)
 
 
+class SchemaVersion(Base):
+    
+    __tablename__ = 'schema_version'
+    
+    schema = Column(String(255), primary_key=True, default=SCHEMA_NAME)
+    schema_version = Column(Integer, default=SCHEMA_VERSION)
+
+    
 def create_all(engine):
     Base.metadata.create_all(bind=engine)
