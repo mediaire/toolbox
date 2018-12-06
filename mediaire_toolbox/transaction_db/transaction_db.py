@@ -102,7 +102,8 @@ class TransactionDB:
     def set_processing(self,
                        id_: int,
                        new_processing_state: str,
-                       last_message: str
+                       last_message: str,
+                       task_progress:int = 0
                        ):
         """to be called when a transaction changes from one processing task
         to another
@@ -118,12 +119,15 @@ class TransactionDB:
             We require a string to be compatible with most RDBMS
             For those which support JSON we can always cast in query time
             (https://stackoverflow.com/questions/16074375/postgresql-9-2-convert-text-json-string-to-type-json-hstore)
+        task_progress
+            Signals the relative progress to completion of the task
         """
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.processing_state = new_processing_state
             t.task_state = TaskState.processing
             t.last_message = last_message
+            t.task_progress = task_progress
             self.session.commit()
         except:
             self.session.rollback()

@@ -60,11 +60,12 @@ class TestTransactionDB(unittest.TestCase):
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1)
         # called when a transaction changes its processing state
-        t_db.set_processing(t_id, 'spm_volumetry', '{}')
+        t_db.set_processing(t_id, 'spm_volumetry', '{}', 10)
         t = t_db.get_transaction(t_id)
 
         self.assertEqual(t.processing_state, 'spm_volumetry')
         self.assertEqual(t.task_state, TaskState.processing)
+        self.assertEqual(t.task_progress, 10)
 
         t_db.close()
 
