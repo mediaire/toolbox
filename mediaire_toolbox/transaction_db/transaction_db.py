@@ -15,7 +15,7 @@ base_logging_conf.basic_logging_conf()
 logger = logging.getLogger(__name__)
 
 
-def migrate(session, db_version, from_schema_version, errors_allowed=False):
+def migrate(session, db_version, errors_allowed=False):
     """Implementing database migration using a similar idea to Flyway:
     
     https://flywaydb.org/getstarted/firststeps/commandline
@@ -25,6 +25,7 @@ def migrate(session, db_version, from_schema_version, errors_allowed=False):
     There are plenty of schema migration tools but at this point it's not clear
     if we need to add the complexity of such tools on our stack. So we do it
     ourselves here."""
+    from_schema_version = db_version.schema_version
     for version in range(from_schema_version + 1, SCHEMA_VERSION + 1):
         logger.info("Applying database migration version %s" % version)
         try:
@@ -64,10 +65,10 @@ class TransactionDB:
             db_version.schema_version = 1
             self.session.add(db_version)
             self.session.commit()
-            migrate(self.session, db_version, 1, errors_allowed=True)
+            migrate(self.session, db_version, errors_allowed=True)
         else:
             if db_version.schema_version < SCHEMA_VERSION:
-                migrate(db_version.schema_version)
+                migrate(self.session, db_version)
 
     def create_transaction(self, t: Transaction) -> int:
         """will set the provided transaction object as queued, 
