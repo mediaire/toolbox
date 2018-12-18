@@ -60,11 +60,12 @@ class TestTransactionDB(unittest.TestCase):
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1)
         # called when a transaction changes its processing state
-        t_db.set_processing(t_id, 'spm_volumetry', '{}')
+        t_db.set_processing(t_id, 'spm_volumetry', '{}', 10)
         t = t_db.get_transaction(t_id)
 
         self.assertEqual(t.processing_state, 'spm_volumetry')
         self.assertEqual(t.task_state, TaskState.processing)
+        self.assertEqual(t.task_progress, 10)
 
         t_db.close()
 
@@ -104,7 +105,18 @@ class TestTransactionDB(unittest.TestCase):
         engine = self._get_temp_db(5)
         t_db = TransactionDB(engine)
         t_db.get_transaction(1)
-        
+
+    def test_migrations(self):
+        temp_folder = tempfile.mkdtemp(suffix='_test_migrations_transaction_db_')
+        temp_db_path = os.path.join(temp_folder, 't_v1.db')
+        shutil.copy('tests/fixtures/t_v1.db', temp_db_path)
+        engine = create_engine('sqlite:///' + temp_db_path)
+        # should execute all migrations code
+        t_db = TransactionDB(engine)
+        # add a new transaction with the current model
+        t = Transaction()
+        t_db.create_transaction(t)
+        shutil.rmtree(temp_folder)
         
     def test_json_serialization(self):
         t = self._get_test_transaction()

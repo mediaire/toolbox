@@ -1,7 +1,9 @@
 # Changelog
 
-## [0.8.0] - 2018-11-01
+## [0.9.0] - 2018-12-18
+* New model for TransactionsDB with "task_progress" field.
 
+## [0.8.0] - 2018-11-01
 * TransactionsDB: a way of tracking cross-services 'transactions' in our system
 * reusable logging primitives
 * daemon base class
