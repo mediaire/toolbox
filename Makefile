@@ -23,7 +23,7 @@ shell:
 	docker run -it $(IMAGE_BASE_NAME):$(IMAGE_TAG) sh
 
 test:
-	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) nosetests --with-coverage --cover-package=$(PROJECT) --cover-min-percentage=50 tests $(PROJECT)/*.py
+	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) nosetests --with-coverage --cover-package=$(PROJECT) --cover-min-percentage=75 tests $(PROJECT)/*.py
 
 lint:
 	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) flake8 $(PROJECT)

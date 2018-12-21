@@ -1,9 +1,9 @@
 import logging
 from sqlalchemy.orm import sessionmaker
 
-from mediaire_toolbox.transaction_db.model import SCHEMA_NAME, \
-                                                  SCHEMA_VERSION, \
-                                                  Transaction, \
+from mediaire_toolbox.constants import TRANSACTIONS_DB_SCHEMA_NAME, \
+                                       TRANSACTIONS_DB_SCHEMA_VERSION
+from mediaire_toolbox.transaction_db.model import Transaction, \
                                                   SchemaVersion, \
                                                   create_all
 from mediaire_toolbox.task_state import TaskState
@@ -26,7 +26,7 @@ def migrate(session, db_version, errors_allowed=False):
     if we need to add the complexity of such tools on our stack. So we do it
     ourselves here."""
     from_schema_version = db_version.schema_version
-    for version in range(from_schema_version + 1, SCHEMA_VERSION + 1):
+    for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
         logger.info("Applying database migration to version %s" % version)
         try:
             for command in migrations.MIGRATIONS[version]:
@@ -54,7 +54,7 @@ class TransactionDB:
         DBSession = sessionmaker(bind=engine)
         self.session = DBSession()
         create_all(engine)
-        db_version = self.session.query(SchemaVersion).get(SCHEMA_NAME)
+        db_version = self.session.query(SchemaVersion).get(TRANSACTIONS_DB_SCHEMA_NAME)
         if not db_version:
             # first time we see the schemaversion table
             # we don't know what's the current version
@@ -64,7 +64,7 @@ class TransactionDB:
             self.session.commit()
             migrate(self.session, db_version, errors_allowed=True)
         else:
-            if db_version.schema_version < SCHEMA_VERSION:
+            if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
                 migrate(self.session, db_version)
 
     def create_transaction(self, t: Transaction) -> int:
