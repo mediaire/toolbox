@@ -4,15 +4,9 @@ from sqlalchemy import Column, Integer, String, Sequence, DateTime, Date, Enum
 from sqlalchemy.ext.declarative import declarative_base
 
 from mediaire_toolbox.task_state import TaskState
+from mediaire_toolbox import constants
 
 Base = declarative_base()
-
-"""Metadata that indicates the version of the schema in the database.
-We use our own schema migration routines. Don't forget to change the version
-number here if you add more fields to the Transaction object, and implement
-the migration SQL queries in migrations.py"""
-SCHEMA_NAME = "TRANSACTION"
-SCHEMA_VERSION = 2
 
 
 class Transaction(Base):
@@ -60,8 +54,10 @@ class SchemaVersion(Base):
     
     __tablename__ = 'schema_version'
     
-    schema = Column(String(255), primary_key=True, default=SCHEMA_NAME)
-    schema_version = Column(Integer, default=SCHEMA_VERSION)
+    schema = Column(String(255), primary_key=True, 
+                    default=constants.TRANSACTIONS_DB_SCHEMA_NAME)
+    schema_version = Column(Integer, 
+                            default=constants.TRANSACTIONS_DB_SCHEMA_VERSION)
 
     
 def create_all(engine):
