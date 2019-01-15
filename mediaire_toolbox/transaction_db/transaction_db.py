@@ -31,14 +31,14 @@ def migrate(session, db_version, errors_allowed=False):
         try:
             for command in migrations.MIGRATIONS[version]:
                 session.execute(command)
-            db_version.schema_version = version
-            session.commit()
         except Exception as e:
             session.rollback()
             if not errors_allowed:
                 raise e 
             else:
                 logger.warn("Ignoring error %s as we didn't know what the database version was." % str(e))
+        db_version.schema_version = version
+        session.commit()
 
 
 class TransactionDB:
