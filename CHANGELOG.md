@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.10.0] - 2019-01-15
+* Bug in migration code, won't change schema version properly
+* Cosmetic refactor (DEV-102)
+
 ## [0.9.0] - 2018-12-18
 * New model for TransactionsDB with "task_progress" field.
 
