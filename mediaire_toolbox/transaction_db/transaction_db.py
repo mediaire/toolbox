@@ -56,8 +56,7 @@ class TransactionDB:
             # it's the first time that we create the database
             # therefore we don't have a row in the table 'schema_version'
             # ... which indicates the version of the transactions DB
-            db_version.schema_version = TRANSACTIONS_DB_SCHEMA_VERSION
-            self.session.add(db_version)
+            self.session.add(SchemaVersion())
             self.session.commit()
         else:
             # check if the existing database is old, and if so migrate
