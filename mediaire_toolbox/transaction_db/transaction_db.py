@@ -15,7 +15,7 @@ base_logging_conf.basic_logging_conf()
 logger = logging.getLogger(__name__)
 
 
-def migrate(session, db_version, errors_allowed=False):
+def migrate(session, db_version):
     """Implementing database migration using a similar idea to Flyway:
     
     https://flywaydb.org/getstarted/firststeps/commandline
@@ -31,14 +31,11 @@ def migrate(session, db_version, errors_allowed=False):
         try:
             for command in migrations.MIGRATIONS[version]:
                 session.execute(command)
+            db_version.schema_version = version
+            session.commit()
         except Exception as e:
             session.rollback()
-            if not errors_allowed:
-                raise e 
-            else:
-                logger.warn("Ignoring error %s as we didn't know what the database version was." % str(e))
-        db_version.schema_version = version
-        session.commit()
+            raise e 
 
 
 class TransactionDB:
@@ -56,14 +53,14 @@ class TransactionDB:
         create_all(engine)
         db_version = self.session.query(SchemaVersion).get(TRANSACTIONS_DB_SCHEMA_NAME)
         if not db_version:
-            # first time we see the schemaversion table
-            # we don't know what's the current version
-            db_version = SchemaVersion()
-            db_version.schema_version = 1
+            # it's the first time that we create the database
+            # therefore we don't have a row in the table 'schema_version'
+            # ... which indicates the version of the transactions DB
+            db_version.schema_version = TRANSACTIONS_DB_SCHEMA_VERSION
             self.session.add(db_version)
             self.session.commit()
-            migrate(self.session, db_version, errors_allowed=True)
         else:
+            # check if the existing database is old, and if so migrate
             if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
                 migrate(self.session, db_version)
 
