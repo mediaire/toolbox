@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.11.0] - 2019-01-21
+* Move AssessmentEdit model classes from webinterface to here
+* Provide universal way of logging in DEBUG mode
+
 ## [0.10.0] - 2019-01-15
 * Bug in migration code, won't change schema version properly
 * Cosmetic refactor (DEV-102)
