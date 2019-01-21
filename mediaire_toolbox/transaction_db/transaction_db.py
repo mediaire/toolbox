@@ -7,11 +7,9 @@ from mediaire_toolbox.transaction_db.model import Transaction, \
                                                   SchemaVersion, \
                                                   create_all
 from mediaire_toolbox.task_state import TaskState
-from mediaire_toolbox.logging import base_logging_conf
 from mediaire_toolbox.transaction_db import migrations
 import datetime
 
-base_logging_conf.basic_logging_conf()
 logger = logging.getLogger(__name__)
 
 

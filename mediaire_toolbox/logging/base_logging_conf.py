@@ -1,5 +1,5 @@
+import os
 import logging
-
 
 """
 Provide a common interface for all our components to do logging
@@ -8,7 +8,8 @@ Provide a common interface for all our components to do logging
 
 def basic_logging_conf():
     """Will set up a basic logging configuration using basicConfig()"""
-    return basic_logging_conf_with_level(logging.INFO)
+    return basic_logging_conf_with_level(
+        logging.DEBUG if "MDBRAIN_DEBUG" in os.environ else logging.INFO)
 
 
 def basic_logging_conf_with_level(level):
@@ -30,6 +31,7 @@ def logger_for_transaction(name: str, t_id: int):
     logger = logging.getLogger(name + "_" + str(t_id))
 
     class TransactionFilter(logging.Filter):
+
         def filter(self, record):
             record.transaction_id = t_id
             return True
