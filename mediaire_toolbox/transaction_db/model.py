@@ -57,8 +57,8 @@ class User(Base):
     __tablename__ = 'users'
         
     id = Column(Integer, Sequence('id'), primary_key=True)
-    name = Column(String(255))
-    password_hash = Column(String(128))
+    name = Column(String(255), unique=True)
+    hashed_password = Column(String(128))
     added = Column(DateTime(), default=datetime.datetime.utcnow)
     
     @staticmethod
@@ -66,12 +66,12 @@ class User(Base):
         return pwd_context.hash(password)
 
     def verify_password(self, password):
-        return pwd_context.verify(password, self.password_hash)
+        return pwd_context.verify(password, self.hashed_password)
     
     def to_dict(self):
         return { 'id': self.id,
                  'name': self.name,
-                 'password_hash': self.api_token_hash,
+                 'hashed_password': self.hashed_password,
                  'added': self.added.strftime("%Y-%m-%d %H:%M:%S") }
         
 
