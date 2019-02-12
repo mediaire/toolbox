@@ -1,7 +1,9 @@
 import datetime
 
-from sqlalchemy import Column, Integer, String, Sequence, DateTime, Date, Enum
+from sqlalchemy import Column, Integer, String, Sequence, DateTime, Date, Enum, \
+                        ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from passlib.apps import custom_app_context as pwd_context
 
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox import constants
@@ -50,13 +52,48 @@ class Transaction(Base):
             self.transaction_id, self.patient_id, self.start_date)
 
 
+class User(Base):
+    
+    __tablename__ = 'users'
+        
+    id = Column(Integer, Sequence('id'), primary_key=True)
+    name = Column(String(255))
+    password_hash = Column(String(128))
+    added = Column(DateTime(), default=datetime.datetime.utcnow)
+    
+    @staticmethod
+    def password_hash(password):
+        return pwd_context.hash(password)
+
+    def verify_password(self, password):
+        return pwd_context.verify(password, self.password_hash)
+    
+    def to_dict(self):
+        return { 'id': self.id,
+                 'name': self.name,
+                 'password_hash': self.api_token_hash,
+                 'added': self.added.strftime("%Y-%m-%d %H:%M:%S") }
+        
+
+class UserTransaction(Base):
+    
+    __tablename__ = 'users_transactions'
+        
+    user_id = Column(Integer, ForeignKey('clients.id'), primary_key=True)
+    transaction_id = Column(Integer, ForeignKey('clients.id'), primary_key=True)
+    
+    def to_dict(self):
+        return { 'user_id': self.user_id,
+                 'transaction_id': self.transaction_id }
+
+
 class SchemaVersion(Base):
     
     __tablename__ = 'schema_version'
     
-    schema = Column(String(255), primary_key=True, 
+    schema = Column(String(255), primary_key=True,
                     default=constants.TRANSACTIONS_DB_SCHEMA_NAME)
-    schema_version = Column(Integer, 
+    schema_version = Column(Integer,
                             default=constants.TRANSACTIONS_DB_SCHEMA_VERSION)
 
     
