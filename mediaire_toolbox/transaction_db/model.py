@@ -79,8 +79,10 @@ class UserTransaction(Base):
     
     __tablename__ = 'users_transactions'
         
-    user_id = Column(Integer, ForeignKey('clients.id'), primary_key=True)
-    transaction_id = Column(Integer, ForeignKey('clients.id'), primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), 
+                     primary_key=True)
+    transaction_id = Column(Integer, ForeignKey('transactions.transaction_id'), 
+                            primary_key=True)
     
     def to_dict(self):
         return { 'user_id': self.user_id,
