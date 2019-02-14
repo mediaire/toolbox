@@ -5,7 +5,7 @@ from mediaire_toolbox.constants import TRANSACTIONS_DB_SCHEMA_NAME, \
                                        TRANSACTIONS_DB_SCHEMA_VERSION
 from mediaire_toolbox.transaction_db.model import Transaction, \
                                                   SchemaVersion, \
-                                                  create_all
+                                                  create_all, UserTransaction
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox.transaction_db import migrations
 import datetime
@@ -61,16 +61,25 @@ class TransactionDB:
             if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
                 migrate(self.session, db_version)
 
-    def create_transaction(self, t: Transaction) -> int:
+    def create_transaction(self, t: Transaction, user_id=None) -> int:
         """will set the provided transaction object as queued, 
         add it to the DB and return the transaction id."""
         try:
             t.task_state = TaskState.queued
             self.session.add(t)
+            # when we commit, we get the transaction ID
+            self.session.commit()
+            if user_id:
+                ut = UserTransaction()
+                ut.user_id = user_id
+                ut.transaction_id = t.transaction_id
+                self.session.add(ut)
             self.session.commit()
             return t.transaction_id
         except:
             self.session.rollback()
+            if(t.transaction_id):
+                self.session.delete(t)
             raise
 
     def get_transaction(self, id_: int) -> Transaction:

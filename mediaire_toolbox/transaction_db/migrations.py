@@ -8,5 +8,7 @@ MIGRATIONS = {
         "UPDATE transactions SET task_progress = 80 WHERE processing_state = 'volumetry_assessment'",
         "UPDATE transactions SET task_progress = 90 WHERE processing_state = 'report'",
         "UPDATE transactions SET task_progress = 100 WHERE processing_state = 'send_to_pacs'"    
+    ],
+    3: [
     ]
 }

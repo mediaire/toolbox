@@ -8,7 +8,9 @@ from datetime import datetime
 from sqlalchemy import create_engine
 
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
-from mediaire_toolbox.transaction_db.model import TaskState, Transaction
+from mediaire_toolbox.transaction_db.model import (
+    TaskState, Transaction, UserTransaction
+)
 
 class TestTransactionDB(unittest.TestCase):
 
@@ -106,6 +108,25 @@ class TestTransactionDB(unittest.TestCase):
         t_db = TransactionDB(engine)
         t_db.get_transaction(1)
 
+    def test_transaction_with_user_id(self):
+        engine = self._get_temp_db(6)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1, 1)
+
+        t = t_db.get_transaction(t_id)
+        self.assertNotEqual(None, t)
+        
+        ut = t_db.session.query(UserTransaction) \
+            .filter_by(transaction_id=t.transaction_id) \
+            .filter_by(user_id=1).first()
+        
+        self.assertEqual(ut.user_id, 1)
+        self.assertEqual(t.transaction_id, ut.transaction_id)
+
+        t_db.close()
+        
     def test_migrations(self):
         temp_folder = tempfile.mkdtemp(suffix='_test_migrations_transaction_db_')
         temp_db_path = os.path.join(temp_folder, 't_v1.db')
