@@ -7,7 +7,7 @@ from copy import deepcopy
 class Task(object):
     """Defines task objects that can be handled by the task manager."""
 
-    def __init__(self, t_id=None, tag=None, input=None, output=None, data=None,
+    def __init__(self, t_id=None, user_id=None, tag=None, input=None, output=None, data=None,
                  timestamp=None, update_timestamp=None, error=None):
         """Initializes the Task object.
 
@@ -15,6 +15,8 @@ class Task(object):
         ----------
         t_id: int
             transaction id this task belongs to
+        user_id: int
+            user_id who submitted this task, if applicable.
         tag: str
             String specifying the task. Unique for each task.
         input: object
@@ -28,6 +30,7 @@ class Task(object):
             a serialized error string in case the task failed while executing
         """
         self.t_id = t_id
+        self.user_id = user_id
         self.tag = tag
         self.input = input
         self.output = output
@@ -45,6 +48,7 @@ class Task(object):
                 'output': self.output,
                 'data': self.data,
                 't_id': self.t_id,
+                'user_id': self.user_id,
                 'error': self.error}
 
     def to_json(self):
@@ -57,14 +61,15 @@ class Task(object):
         tag = d['tag']
         timestamp = d['timestamp']        
         t_id = d.get('t_id', None)
+        user_id = d.get('user_id', None)
         update_timestamp = d.get('update_timestamp', None)
         input_ = d.get('input', None)
         output = d.get('output', None)
         data = d.get('data', None)
         error = d.get('error', None)
-        self.__init__(t_id=t_id, tag=tag, input=input_, output=output, data=data,
-                      timestamp=timestamp, update_timestamp=update_timestamp,
-                      error=error)
+        self.__init__(t_id=t_id, user_id=user_id, tag=tag, input=input_,
+                      output=output, data=data, timestamp=timestamp,
+                      update_timestamp=update_timestamp, error=error)
         return self
 
     def read_bytes(self, bytestring):
@@ -99,13 +104,16 @@ class Task(object):
 class DicomTask(Task):
     """Dicom specific task"""
 
-    def __init__(self, t_id=None, tag=None, input=None, output=None, dicom_info=None,
-                 data=None, timestamp=None, update_timestamp=None, error=None):
+    def __init__(self, t_id=None, user_id=None, tag=None, input=None,
+                 output=None, dicom_info=None, data=None, timestamp=None,
+                 update_timestamp=None, error=None):
         """Initializes the Task object.
         Parameters
         ----------
         t_id: int
             transaction id this task belongs to
+        user_id: int
+            user_id who submitted this task, if applicable.
         tag: str
             String specifying the task. Unique for each task.
         input
@@ -120,7 +128,8 @@ class DicomTask(Task):
                 data = {'dicom_info': dicom_info}
             else:
                 data['dicom_info'] = dicom_info
-        super().__init__(t_id, tag, input, output, data, timestamp, update_timestamp, error)
+        super().__init__(t_id, user_id, tag, input, output, data,
+                         timestamp, update_timestamp, error)
 
     def get_subject_name(self):
         # the T1 header should always be there
