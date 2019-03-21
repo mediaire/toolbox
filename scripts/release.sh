@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RELEASE_TYPES="('major', 'minor', 'patch')"
-USAGE="release.sh <project_folder> <release_type (one of: ${RELEASE_TYPES}>"
+USAGE="release.sh <project_folder> <release_type (one of: ${RELEASE_TYPES})>"
 
 error_trap() {
     echo "$1" >&2; exit 1
@@ -51,15 +51,18 @@ echo "Last tag is: '${last_tag}'"
 # Make sure the last tag is the same as the version on __init__.py
 # We require that the project is always in a consistent state
 #
-current_version=`cat ${VERSION_FILE} | awk '{ print $3 }' | cut -d "'" -f2`
+current_version=`cat ${VERSION_FILE} | grep "__version__" | awk '{ print $3 }' | cut -d "'" -f2`
 if [ ! ${current_version} == ${last_tag} ]; then
-    error_trap "Current version ${current_version} differs from last tag: ${last_tag}. Please reset the status of the project to a consistent state."
+    current_version=`cat ${VERSION_FILE} | grep "__version__"  | awk '{ print $3 }' | cut -d "\"" -f2`
+    if [ ! ${current_version} == ${last_tag} ]; then
+        error_trap "Current version ${current_version} differs from last tag: ${last_tag}. Please reset the status of the project to a consistent state."
+    fi
 fi
 
 #
 # Make sure there has been at least some change since the last release
 #
-change_log=`git log ${last_tag}..HEAD --oneline | grep -v "Merge branch" | awk '{print "* "$0}'`
+change_log=`git log ${last_tag}..HEAD --oneline | grep -v "Merge branch" | grep -vi "Bump version" | awk '{print "* "$0}'`
 if [ -z "$change_log" ]; then
     error_trap "No changes since last tag, nothing to release." 
     exit 1
