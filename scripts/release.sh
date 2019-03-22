@@ -51,12 +51,9 @@ echo "Last tag is: '${last_tag}'"
 # Make sure the last tag is the same as the version on __init__.py
 # We require that the project is always in a consistent state
 #
-current_version=`cat ${VERSION_FILE} | grep "__version__" | awk '{ print $3 }' | cut -d "'" -f2`
+current_version=`grep -Pzo "(?s)__version__\s*=\s*('|\")\K(\d+.\d+.\d+)" ${VERSION_FILE}`
 if [ ! ${current_version} == ${last_tag} ]; then
-    current_version=`cat ${VERSION_FILE} | grep "__version__"  | awk '{ print $3 }' | cut -d "\"" -f2`
-    if [ ! ${current_version} == ${last_tag} ]; then
-        error_trap "Current version ${current_version} differs from last tag: ${last_tag}. Please reset the status of the project to a consistent state."
-    fi
+    error_trap "Current version ${current_version} differs from last tag: ${last_tag}. Please reset the status of the project to a consistent state."
 fi
 
 #
