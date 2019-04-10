@@ -28,9 +28,9 @@ class DataCleaner:
 
     def current_size(self):
         """disk usage in bytes"""
-        return subprocess.check_output(['du', '-s', self.base_folder]) \
+        return int(subprocess.check_output(['du', '-s', self.base_folder]) \
             .split()[0] \
-            .decode('utf-8')
+            .decode('utf-8'))
 
     def creation_time(self, folder):
         return int(os.path.getmtime(folder))
