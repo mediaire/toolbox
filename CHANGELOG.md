@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.12.0] - 2019-04-10
+* Auto-release script
+* Bug in DataCleaner solved (folder size - int / str)
+
 ## [0.11.0] - 2019-01-21
 * Move AssessmentEdit model classes from webinterface to here
 * Provide universal way of logging in DEBUG mode
