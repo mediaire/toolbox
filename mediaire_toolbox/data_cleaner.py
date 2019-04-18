@@ -42,6 +42,9 @@ class DataCleaner:
 
     def clean_up(self, dry_run=False):
         removed = []
+        if self.max_folder_size == -1 and self.max_data_seconds == -1:
+            # nothing to be done
+            return removed
         current_time = int(time.time())
         default_logger.debug('Current time is %s' % current_time)
         for folder in sorted(self.list_sub_folders(self.base_folder),
