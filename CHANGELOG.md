@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.13.0] - 2019-04-18
+* Fix DataCleaner - do nothing if -1 for both space and time
+
 ## [0.12.0] - 2019-04-10
 * Auto-release script
 * Bug in DataCleaner solved (folder size - int / str)
