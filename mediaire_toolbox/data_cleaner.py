@@ -2,6 +2,7 @@ import subprocess
 import time
 import shutil
 import os
+import fnmatch
 import logging
 
 
@@ -18,10 +19,13 @@ time it will be cleaned up.
 
 class DataCleaner:
 
-    def __init__(self, folder, max_folder_size, max_data_seconds):
+    def __init__(self, folder, max_folder_size, max_data_seconds,
+                 filter_list=None, white_list_mode=True):
         self.base_folder = folder
         self.max_folder_size = max_folder_size
         self.max_data_seconds = max_data_seconds
+        self.filter_list = filter_list
+        self.white_list_mode = white_list_mode
         default_logger.info("""Instantiated a DataCleaner on folder {%s} with max 
                     foldersize={%s} and max data seconds={%s}""" %
                     (folder, max_folder_size, max_data_seconds))
@@ -39,6 +43,39 @@ class DataCleaner:
     def list_sub_folders(folder):
         return [os.path.join(folder, sub_folder)
                 for sub_folder in os.listdir(folder)]
+
+    def clean_folder(self, folder, dry_run=False):
+        file_set = set([f for f in os.listdir(folder)
+                        if os.path.isfile(os.path.join(folder, f))])
+        if not file_set:
+            if dry_run:
+                default_logger.info('(dry-run) Would remove folder [%s]' % folder)
+            else:
+                default_logger.info('Removing folder [%s]' % folder)
+                shutil.rmtree(folder)
+            return None
+        #print(fnmatch.filter(list(file_set), self.filter_list[0]))
+        filter_set = set()
+        for f in self.filter_list:
+            filter_set = filter_set.union(set(fnmatch.filter(
+                             file_set, f)))
+
+        if self.white_list_mode:
+            delete_list = [os.path.join(folder, f) for f in 
+                           list(file_set - filter_set)]
+        else:
+            delete_list = [os.path.join(folder, f) for f in 
+                           list(filter_set)]
+
+        for file_path in delete_list:
+            if dry_run:
+                default_logger.info('(dry-run) Would remove file [%s]' % file_path)
+            else:
+                default_logger.info('Removing file [%s]' % file_path)
+                os.remove(file_path)
+        return delete_list
+            
+        
 
     def clean_up(self, dry_run=False):
         removed = []
@@ -92,8 +129,13 @@ class DataCleaner:
                 removed.append(folder)
                 if dry_run:
                     default_logger.info('(dry-run) Would remove folder [%s]' % folder)
+                    if self.filter_list:
+                        self.clean_folder(folder)
                 else:
                     default_logger.info('Removing folder [%s]' % folder)
-                    shutil.rmtree(folder)
+                    if self.filter_list:
+                        self.clean_folder(folder)
+                    else:
+                        shutil.rmtree(folder)
      
         return removed

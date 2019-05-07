@@ -101,7 +101,7 @@ class TestUtils(unittest.TestCase):
             shutil.rmtree(temp_folder)
 
     def test_early_termination(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_3')
+        temp_folder = tempfile.mkdtemp(suffix='_test_4')
         sub_folder_1 = tempfile.mkdtemp(dir=temp_folder)
         sub_folder_2 = tempfile.mkdtemp(dir=temp_folder)
         sub_folder_3 = tempfile.mkdtemp(dir=temp_folder)
@@ -138,3 +138,36 @@ class TestUtils(unittest.TestCase):
                 self.assertTrue(len(removed) == 1)
                 self.assertEqual(removed[0], sub_folder_3)
                 shutil.rmtree(temp_folder)
+
+    def test_filterlist(self):
+        temp_folder = tempfile.mkdtemp(suffix='_test_5')
+        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=temp_folder)
+        _, tmp_file_2 = tempfile.mkstemp(suffix='.nifti', dir=temp_folder)
+
+        filter_list = ['*.dcm']
+
+        mock_cleaner = DataCleaner(temp_folder, -1, -1, filter_list=filter_list,
+                                   white_list_mode=True)
+        removed = mock_cleaner.clean_folder(temp_folder, dry_run=True) 
+        self.assertTrue(len(removed) == 1)
+        self.assertEqual(removed[0], tmp_file_2)
+
+        mock_cleaner.white_list_mode = False
+        removed = mock_cleaner.clean_folder(temp_folder, dry_run=True) 
+        self.assertTrue(len(removed) == 1)
+        self.assertEqual(removed[0], tmp_file_1)
+        shutil.rmtree(temp_folder)
+    
+    def test_unix_filter(self):
+        temp_folder = tempfile.mkdtemp(suffix='_test_6')
+        _, tmp_file_1 = tempfile.mkstemp(prefix='Person1', suffix='.dcm', dir=temp_folder)
+        _, tmp_file_2 = tempfile.mkstemp(prefix='Person2', suffix='.dcm', dir=temp_folder)
+        
+        filter_list = ['Person1*.dcm']
+
+        mock_cleaner = DataCleaner(temp_folder, -1, -1, filter_list=filter_list,
+                                   white_list_mode=True)
+        removed = mock_cleaner.clean_folder(temp_folder, dry_run=True) 
+        self.assertTrue(len(removed) == 1)
+        self.assertEqual(removed[0], tmp_file_2)
+        shutil.rmtree(temp_folder)
