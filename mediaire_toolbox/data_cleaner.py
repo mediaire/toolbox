@@ -26,9 +26,9 @@ class DataCleaner:
                     foldersize={%s} and max data seconds={%s}""" %
                     (folder, max_folder_size, max_data_seconds))
 
-    def current_size(self):
+    def current_size(self, folder):
         """disk usage in bytes"""
-        return int(subprocess.check_output(['du', '-s', self.base_folder]) \
+        return int(subprocess.check_output(['du', '-s', folder]) \
             .split()[0] \
             .decode('utf-8'))
 
@@ -46,7 +46,14 @@ class DataCleaner:
             # nothing to be done
             return removed
         current_time = int(time.time())
+
+        current_size = self.current_size(self.base_folder)
+
+        size_checked = False
+        time_checked = False
+
         default_logger.debug('Current time is %s' % current_time)
+
         for folder in sorted(self.list_sub_folders(self.base_folder),
                              key=self.creation_time):
             # this already returns all sub-folders sorted from older to newer
@@ -57,27 +64,36 @@ class DataCleaner:
                 folder, self.creation_time(folder)))
             delete = False
 
-            if (self.max_data_seconds > 0 and 
-               (current_time - self.creation_time(folder)) > self.max_data_seconds):
-                # base_folder is too old, must be deleted
-                delete = True
-                default_logger.info(
-                    'Sub-folder is older than %s seconds, will delete' %
-                    self.max_data_seconds)
+            # if time checks and size checks both fullfilled, return early
+            if time_checked and size_checked:
+                return removed
 
-            current_size = self.current_size()
-
-            if (not delete and self.max_folder_size > 0 
-                and current_size > self.max_folder_size):
-                # base_folder is still too big, let's delete this sub folder
-                delete = True
-                default_logger.info(
-                    "Current total size is too big (%s bytes), need to delete some data to free up space" % current_size)
+            if not time_checked:
+                time_checked = not(self.max_data_seconds > 0 and 
+               (current_time - self.creation_time(folder)) > self.max_data_seconds)
+                if not time_checked:
+                    # base_folder is too old, must be deleted
+                    delete = True
+                    default_logger.info(
+                        'Sub-folder is older than %s seconds, will delete' %
+                        self.max_data_seconds)
+            
+            if not size_checked and not delete:
+                size_checked = not (self.max_folder_size > 0 
+                and current_size > self.max_folder_size)
+                if not size_checked:
+                    # base_folder is still too big, let's delete this sub folder
+                    delete = True
+                    default_logger.info(
+                        "Current total size is too big (%s bytes), need to delete some data to free up space" % current_size)
             if delete:
+                if not size_checked:
+                    current_size = current_size - self.current_size(folder)
                 removed.append(folder)
                 if dry_run:
                     default_logger.info('(dry-run) Would remove folder [%s]' % folder)
                 else:
                     default_logger.info('Removing folder [%s]' % folder)
                     shutil.rmtree(folder)
+     
         return removed
