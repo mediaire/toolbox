@@ -146,13 +146,12 @@ class TestUtils(unittest.TestCase):
 
         filter_list = ['*.dcm']
 
-        mock_cleaner = DataCleaner(temp_folder, -1, -1, filter_list=filter_list,
-                                   white_list_mode=True)
+        mock_cleaner = DataCleaner(temp_folder, -1, -1, whitelist=filter_list)
         removed = mock_cleaner.clean_folder(temp_folder, dry_run=True) 
         self.assertTrue(len(removed) == 1)
         self.assertEqual(removed[0], tmp_file_2)
 
-        mock_cleaner.white_list_mode = False
+        mock_cleaner = DataCleaner(temp_folder, -1, -1, blacklist=filter_list)
         removed = mock_cleaner.clean_folder(temp_folder, dry_run=True) 
         self.assertTrue(len(removed) == 1)
         self.assertEqual(removed[0], tmp_file_1)
@@ -165,8 +164,7 @@ class TestUtils(unittest.TestCase):
         
         filter_list = ['Person1*.dcm']
 
-        mock_cleaner = DataCleaner(temp_folder, -1, -1, filter_list=filter_list,
-                                   white_list_mode=True)
+        mock_cleaner = DataCleaner(temp_folder, -1, -1, whitelist=filter_list)
         removed = mock_cleaner.clean_folder(temp_folder, dry_run=True) 
         self.assertTrue(len(removed) == 1)
         self.assertEqual(removed[0], tmp_file_2)

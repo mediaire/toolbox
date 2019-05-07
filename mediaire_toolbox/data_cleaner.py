@@ -20,23 +20,35 @@ time it will be cleaned up.
 class DataCleaner:
 
     def __init__(self, folder, max_folder_size, max_data_seconds,
-                 filter_list=None, white_list_mode=True):
+                 whitelist=None, blacklist=None):
+        """
+        Parameters
+        ----------
+        whitelist: list
+            Whitelist for files. Unix like filename pattern.
+        blacklist: list
+            Blacklist for files. Unix like filename pattern.
+        """
         self.base_folder = folder
         self.max_folder_size = max_folder_size
         self.max_data_seconds = max_data_seconds
-        self.filter_list = filter_list
-        self.white_list_mode = white_list_mode
+        self.whitelist = whitelist
+        self.blacklist = blacklist
+        if whitelist and blacklist:
+            raise ValueError("Both black list and white list in instance")
         default_logger.info("""Instantiated a DataCleaner on folder {%s} with max 
                     foldersize={%s} and max data seconds={%s}""" %
                     (folder, max_folder_size, max_data_seconds))
 
-    def current_size(self, folder):
+    @staticmethod
+    def current_size(folder):
         """disk usage in bytes"""
         return int(subprocess.check_output(['du', '-s', folder]) \
             .split()[0] \
             .decode('utf-8'))
 
-    def creation_time(self, folder):
+    @staticmethod
+    def creation_time(folder):
         return int(os.path.getmtime(folder))
 
     @staticmethod
@@ -45,6 +57,10 @@ class DataCleaner:
                 for sub_folder in os.listdir(folder)]
 
     def clean_folder(self, folder, dry_run=False):
+        """Cleans the folder given the filterlist.
+        Can be either a blacklist or a whitelist.
+        Deletes the files under the folder.
+        """
         file_set = set([f for f in os.listdir(folder)
                         if os.path.isfile(os.path.join(folder, f))])
         if not file_set:
@@ -54,13 +70,14 @@ class DataCleaner:
                 default_logger.info('Removing folder [%s]' % folder)
                 shutil.rmtree(folder)
             return None
-        #print(fnmatch.filter(list(file_set), self.filter_list[0]))
+    
         filter_set = set()
-        for f in self.filter_list:
+        filter_list = self.whitelist or self.blacklist
+        for f in filter_list:
             filter_set = filter_set.union(set(fnmatch.filter(
-                             file_set, f)))
+                                          file_set, f)))
 
-        if self.white_list_mode:
+        if self.whitelist:
             delete_list = [os.path.join(folder, f) for f in 
                            list(file_set - filter_set)]
         else:
@@ -74,10 +91,10 @@ class DataCleaner:
                 default_logger.info('Removing file [%s]' % file_path)
                 os.remove(file_path)
         return delete_list
-            
-        
 
     def clean_up(self, dry_run=False):
+        """Cleans up, clean up folders that either take up too much space or 
+        """
         removed = []
         if self.max_folder_size == -1 and self.max_data_seconds == -1:
             # nothing to be done
@@ -107,7 +124,7 @@ class DataCleaner:
 
             if not time_checked:
                 time_checked = not(self.max_data_seconds > 0 and 
-               (current_time - self.creation_time(folder)) > self.max_data_seconds)
+                                   (current_time - self.creation_time(folder)) > self.max_data_seconds)
                 if not time_checked:
                     # base_folder is too old, must be deleted
                     delete = True
@@ -117,25 +134,31 @@ class DataCleaner:
             
             if not size_checked and not delete:
                 size_checked = not (self.max_folder_size > 0 
-                and current_size > self.max_folder_size)
+                                    and current_size > self.max_folder_size)
                 if not size_checked:
                     # base_folder is still too big, let's delete this sub folder
                     delete = True
                     default_logger.info(
-                        "Current total size is too big (%s bytes), need to delete some data to free up space" % current_size)
+                        "Current total size is too big (%s bytes), \
+                         need to delete some data to free up space" % current_size)
             if delete:
-                if not size_checked:
-                    current_size = current_size - self.current_size(folder)
                 removed.append(folder)
+                if not size_checked:
+                    pre_clean_size = self.current_size(folder)
                 if dry_run:
                     default_logger.info('(dry-run) Would remove folder [%s]' % folder)
-                    if self.filter_list:
+                    if self.whitelist or self.blacklist:
                         self.clean_folder(folder)
                 else:
                     default_logger.info('Removing folder [%s]' % folder)
-                    if self.filter_list:
+                    if self.whitelist or self.blacklist:
                         self.clean_folder(folder)
+                        if not size_checked:
+                            current_size = current_size - (pre_clean_size -
+                                                   self.current_size(folder))
                     else:
                         shutil.rmtree(folder)
-     
+                        if not size_checked:
+                            current_size = current_size - pre_clean_size
+
         return removed
