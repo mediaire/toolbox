@@ -63,6 +63,7 @@ class DataCleaner:
         """
         file_set = set([f for f in os.listdir(folder)
                         if os.path.isfile(os.path.join(folder, f))])
+        # empy folder, delete the folder
         if not file_set:
             if dry_run:
                 default_logger.info('(dry-run) Would remove folder [%s]' % folder)
@@ -115,22 +116,20 @@ class DataCleaner:
                 folder, self.creation_time(folder)))
             delete = False
 
-            if self.max_data_seconds > 0 and \
-                                   (current_time - self.creation_time(folder)) > self.max_data_seconds:
+            if (self.max_data_seconds > 0 and 
+               (current_time - self.creation_time(folder)) > self.max_data_seconds):
                 # base_folder is too old, must be deleted
                 delete = True
                 default_logger.info(
                     'Sub-folder is older than %s seconds, will delete' %
                     self.max_data_seconds)
             
-            if  not delete:
-                if self.max_folder_size > 0 \
-                                    and current_size > self.max_folder_size:
-                    # base_folder is still too big, let's delete this sub folder
-                    delete = True
-                    default_logger.info(
-                        "Current total size is too big (%s bytes), \
-                         need to delete some data to free up space" % current_size)
+            if (not delete and self.max_folder_size > 0 
+                and current_size > self.max_folder_size):
+                # base_folder is still too big, let's delete this sub folder
+                delete = True
+                default_logger.info(
+                    "Current total size is too big (%s bytes), need to delete some data to free up space" % current_size)
             if delete:
                 removed.append(folder)
                 pre_clean_size = self.current_size(folder)
