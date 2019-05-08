@@ -103,9 +103,6 @@ class DataCleaner:
 
         current_size = self.current_size(self.base_folder)
 
-        size_checked = False
-        time_checked = False
-
         default_logger.debug('Current time is %s' % current_time)
 
         for folder in sorted(self.list_sub_folders(self.base_folder),
@@ -118,24 +115,17 @@ class DataCleaner:
                 folder, self.creation_time(folder)))
             delete = False
 
-            # if time checks and size checks both fullfilled, return early
-            if time_checked and size_checked:
-                return removed
-
-            if not time_checked:
-                time_checked = not(self.max_data_seconds > 0 and 
-                                   (current_time - self.creation_time(folder)) > self.max_data_seconds)
-                if not time_checked:
-                    # base_folder is too old, must be deleted
-                    delete = True
-                    default_logger.info(
-                        'Sub-folder is older than %s seconds, will delete' %
-                        self.max_data_seconds)
+            if self.max_data_seconds > 0 and \
+                                   (current_time - self.creation_time(folder)) > self.max_data_seconds:
+                # base_folder is too old, must be deleted
+                delete = True
+                default_logger.info(
+                    'Sub-folder is older than %s seconds, will delete' %
+                    self.max_data_seconds)
             
-            if not size_checked and not delete:
-                size_checked = not (self.max_folder_size > 0 
-                                    and current_size > self.max_folder_size)
-                if not size_checked:
+            if  not delete:
+                if self.max_folder_size > 0 \
+                                    and current_size > self.max_folder_size:
                     # base_folder is still too big, let's delete this sub folder
                     delete = True
                     default_logger.info(
@@ -143,8 +133,7 @@ class DataCleaner:
                          need to delete some data to free up space" % current_size)
             if delete:
                 removed.append(folder)
-                if not size_checked:
-                    pre_clean_size = self.current_size(folder)
+                pre_clean_size = self.current_size(folder)
                 if dry_run:
                     default_logger.info('(dry-run) Would remove folder [%s]' % folder)
                     if self.whitelist or self.blacklist:
@@ -153,12 +142,10 @@ class DataCleaner:
                     default_logger.info('Removing folder [%s]' % folder)
                     if self.whitelist or self.blacklist:
                         self.clean_folder(folder)
-                        if not size_checked:
-                            current_size = current_size - (pre_clean_size -
+                        current_size = current_size - (pre_clean_size -
                                                    self.current_size(folder))
                     else:
                         shutil.rmtree(folder)
-                        if not size_checked:
-                            current_size = current_size - pre_clean_size
+                        current_size = current_size - pre_clean_size
 
         return removed

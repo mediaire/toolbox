@@ -3,7 +3,6 @@ import json
 
 from copy import deepcopy
 
-
 class Task(object):
     """Defines task objects that can be handled by the task manager."""
 

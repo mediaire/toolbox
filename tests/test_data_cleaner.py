@@ -169,3 +169,49 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(len(removed) == 1)
         self.assertEqual(removed[0], tmp_file_2)
         shutil.rmtree(temp_folder)
+
+    def test_partially_remove(self):
+        temp_folder = tempfile.mkdtemp(suffix='_test_7')
+        sub_folder_1 = tempfile.mkdtemp(dir=temp_folder)
+        sub_folder_2 = tempfile.mkdtemp(dir=temp_folder)
+        sub_folder_3 = tempfile.mkdtemp(dir=temp_folder)
+
+        current_time = time.time()
+
+        sub_folder_2_sizes = iter([500, 0, 0])
+        sub_folder_3_sizes = iter([1400, 600, 0])
+
+        def current_size(folder):
+            if folder == sub_folder_2:
+                return next(sub_folder_2_sizes)
+            if folder == sub_folder_3:
+                return next(sub_folder_3_sizes)
+            if folder == temp_folder:
+                return 1024*2
+            raise ValueError
+
+        def creation_time(folder):
+            folder_time = {sub_folder_1: int(current_time - 10),
+                           sub_folder_2: int(current_time - 20),
+                           sub_folder_3: int(current_time - 30)}
+            return folder_time[folder]
+
+        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size, \
+             mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time, \
+             mock.patch.object(DataCleaner, 'clean_folder') as mocked_clean_folder:
+                mocked_current_size.side_effect = current_size
+                mocked_creation_time.side_effect = creation_time
+
+                # remove folders older than 1 day
+                # and remove old folders as long as total size exceed 1 MB
+                mock_cleaner = DataCleaner(temp_folder, 1024, 60 * 60 * 24,
+                                           whitelist=["*.dcm"])
+                try:
+                    removed = mock_cleaner.clean_up(dry_run=False)
+                except:
+                    self.fail("Early termination failed")
+
+                self.assertTrue(len(removed) == 2)
+                self.assertEqual(removed[0], sub_folder_3)
+                self.assertEqual(removed[1], sub_folder_2)
+                shutil.rmtree(temp_folder)
