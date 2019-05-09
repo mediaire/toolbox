@@ -163,8 +163,7 @@ class TestUtils(unittest.TestCase):
 
     def test_partially_remove(self):
         """
-        Test early termination and removing the correct folders when 
-        partially removing files using a filter.
+        Test early termination and removing the correct folders when partially removing files using a filter.
         """
         temp_folder = tempfile.mkdtemp(suffix='_test_7')
         sub_folder_1 = tempfile.mkdtemp(dir=temp_folder)
@@ -196,6 +195,7 @@ class TestUtils(unittest.TestCase):
              mock.patch.object(DataCleaner, 'clean_folder') as mocked_clean_folder:
                 mocked_current_size.side_effect = current_size
                 mocked_creation_time.side_effect = creation_time
+                mocked_clean_folder.side_effect = lambda x : None
 
                 # remove folders older than 1 day
                 # and remove old folders as long as total size exceed 1 MB

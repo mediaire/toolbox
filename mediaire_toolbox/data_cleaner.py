@@ -141,10 +141,13 @@ class DataCleaner:
                     default_logger.info('Removing folder [%s]' % folder)
                     if self.whitelist or self.blacklist:
                         self.clean_folder(folder)
+                    else:
+                        shutil.rmtree(folder)
+                    #check if folder still exits
+                    if os.path.isdir(folder):
                         current_size = current_size - (pre_clean_size -
                                                    self.current_size(folder))
                     else:
-                        shutil.rmtree(folder)
                         current_size = current_size - pre_clean_size
-
+         
         return removed
