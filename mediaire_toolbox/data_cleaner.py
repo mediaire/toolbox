@@ -59,7 +59,7 @@ class DataCleaner:
     def clean_folder(self, folder, dry_run=False):
         """Cleans the folder given the filterlist.
         Can be either a blacklist or a whitelist.
-        Deletes the files under the folder.
+        Deletes the filtered files in the folder.
         """
         file_set = set([f for f in os.listdir(folder)
                         if os.path.isfile(os.path.join(folder, f))])
@@ -94,7 +94,7 @@ class DataCleaner:
         return delete_list
 
     def clean_up(self, dry_run=False):
-        """Cleans up, clean up folders that either take up too much space or 
+        """Cleans up folders that either take up too much space or are too old
         """
         removed = []
         if self.max_folder_size == -1 and self.max_data_seconds == -1:
