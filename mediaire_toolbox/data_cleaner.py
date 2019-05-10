@@ -4,6 +4,7 @@ import shutil
 import os
 import fnmatch
 import logging
+import argparse
 
 
 default_logger = logging.getLogger(__name__)
@@ -52,9 +53,12 @@ class DataCleaner:
     @staticmethod
     def current_size(folder):
         """disk usage in bytes"""
-        return int(subprocess.check_output(['du', '-s', folder]) \
-            .split()[0] \
-            .decode('utf-8'))
+        if os.path.isdir(folder):
+            return int(subprocess.check_output(['du', '-s', folder]) \
+                .split()[0] \
+                .decode('utf-8'))
+        else: 
+            return 0
 
     @staticmethod
     def creation_time(folder):
@@ -174,16 +178,47 @@ class DataCleaner:
                         default_logger.info('Removing folder [%s]' % folder)
                         shutil.rmtree(folder)
 
-                #check if folder still exits
-                if os.path.isdir(folder):
-                    # if the folder exists, the current size is subtracted with the 
-                    # size of deleted files, which is the original sub folder size 
-                    # minus the niew sub folder size
-                    current_size = current_size - (pre_clean_size -
-                                            self.current_size(folder))
-                else:
-                    # if the folder does not exist, just subtract the current size with
-                    # the original sub folder size
-                    current_size = current_size - pre_clean_size
+                # if the folder exists, the current size is subtracted with the 
+                # size of deleted files, which is the original sub folder size 
+                # minus the niew sub folder size
+                current_size = current_size - (pre_clean_size -
+                                               self.current_size(folder))
          
         return removed
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='clean folder')
+    parser.add_argument('--folder', nargs='?', const=1, type=str,
+                        help='root folder to be cleaned')
+    parser.add_argument('--max_folder_size', nargs='?', const=1, type=int, default=-1,
+                        help='maximum allowed folder size')
+    parser.add_argument('--max_data_seconds', nargs='?', const=1, type=int, default=-1,
+                        help='maximum allowed folder age') 
+    parser.add_argument('--whitelist', type=str, nargs='?',
+                        help='whitelist pathname')
+    parser.add_argument('--blacklist', type=str, nargs='?',
+                        help='blacklist pathname')
+    parser.add_argument('--dry_run', action="store_true", default=False)
+    parser.add_argument('-d', '--debug',
+                        help="Set Log level for debug",
+                        action="store_const", dest="loglevel", const=logging.DEBUG,
+                        default=logging.WARNING,
+                        )
+    args = parser.parse_args()
+    logging.basicConfig(level=args.loglevel)
+    dry_run = args.dry_run
+
+    filter_path = args.blacklist or args.whitelist
+    if filter_path:
+        with open(filter_path) as f:
+            filter_list = [l.split()[0] for l in f.readlines()]
+
+    data_cleaner = DataCleaner(args.folder,
+                               args.max_folder_size,
+                               args.max_data_seconds,
+                               whitelist=(filter_list if args.whitelist else None),
+                               blacklist=(filter_list if args.blacklist else None))
+    data_cleaner.clean_up(dry_run=dry_run)
+    

@@ -146,7 +146,7 @@ class TestUtils(unittest.TestCase):
         filter_list = ['Person1*.dcm']
         with self.assertRaises(ValueError):
             DataCleaner(temp_folder, -1, -1, whitelist=filter_list,
-                                                  blacklist=filter_list)
+                        blacklist=filter_list)
         
     def test_blacklist(self):
         temp_folder = tempfile.mkdtemp(suffix='_test_6')
