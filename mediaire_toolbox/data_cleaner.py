@@ -13,7 +13,7 @@ Utility class for monitoring the disk usage in a folder and automatically
 cleaning up sub folders in case of need. Older sub folders would be cleaned up 
 first.
 You can also configure a number of seconds as age for sub folders, after which 
-time it will be cleaned up. 
+time it will be cleaned up.
 """
 
 
@@ -24,6 +24,12 @@ class DataCleaner:
         """
         Parameters
         ----------
+        max_folder_size: int
+            Max folder size, delete until current size is smaller than this.
+            -1 if not deleting files based on size.
+        max_data_seconds: int
+            Max data age, delete folders that are older than this many seconds.
+            -1 if not deleting files based on age.
         whitelist: list
             Whitelist for files. Unix like filename pattern.
         blacklist: list
@@ -57,10 +63,16 @@ class DataCleaner:
                 for sub_folder in os.listdir(folder)]
 
     def clean_folder(self, folder, dry_run=False):
-        """Cleans the folder given the filterlist.
-        Can be either a blacklist or a whitelist.
-        Deletes the filtered files in the folder.
+        """Cleans the contents of the parameter folder. 
+        If the instance was configured with a whitelist or a blacklist, 
+        a selective delete will be performed accordingly."
+
+        Returns
+        -------
+        list
+            Returns the list of files deleted.
         """
+        # the set of all files in the folder
         file_set = set([f for f in os.listdir(folder)
                         if os.path.isfile(os.path.join(folder, f))])
         # empy folder, delete the folder
@@ -71,17 +83,21 @@ class DataCleaner:
                 default_logger.info('Removing folder [%s]' % folder)
                 shutil.rmtree(folder)
             return None
-    
+        # the set of filtered filenames that match the whitelist/blacklist pattern
         filter_set = set()
+        # the list of patterns from whitelist/blacklist
         filter_list = self.whitelist or self.blacklist
         for f in filter_list:
             filter_set = filter_set.union(set(fnmatch.filter(
                                           file_set, f)))
 
         if self.whitelist:
+            # if it is a whitelist, the list of deleted files are the files in the folder
+            # but not on the matched filenames
             delete_list = [os.path.join(folder, f) for f in 
                            list(file_set - filter_set)]
         else:
+            # if it is a blacklist, the list of deleted files are the files with matched filenames
             delete_list = [os.path.join(folder, f) for f in 
                            list(filter_set)]
 
@@ -91,6 +107,9 @@ class DataCleaner:
             else:
                 default_logger.info('Removing file [%s]' % file_path)
                 os.remove(file_path)
+        # remove the folder if it is empty
+        if len(os.listdir(folder)) == 0:
+            shutil.rmtree(folder)
         return delete_list
 
     def clean_up(self, dry_run=False):
@@ -133,21 +152,28 @@ class DataCleaner:
             if delete:
                 removed.append(folder)
                 pre_clean_size = self.current_size(folder)
-                if dry_run:
-                    default_logger.info('(dry-run) Would remove folder [%s]' % folder)
-                    if self.whitelist or self.blacklist:
-                        self.clean_folder(folder)
+                # if whitelist/blacklist exists delete files from folder
+                if self.whitelist or self.blacklist:
+                    default_logger.info('Cleaning folder [%s]' % folder)
+                    self.clean_folder(folder, dry_run)
+                # if they don't exist delete the whole folder
                 else:
-                    default_logger.info('Removing folder [%s]' % folder)
-                    if self.whitelist or self.blacklist:
-                        self.clean_folder(folder)
+                    if dry_run:
+                        default_logger.info('(dry-run) Would remove folder [%s]' % folder)
                     else:
+                        default_logger.info('Removing folder [%s]' % folder)
                         shutil.rmtree(folder)
-                    #check if folder still exits
-                    if os.path.isdir(folder):
-                        current_size = current_size - (pre_clean_size -
-                                                   self.current_size(folder))
-                    else:
-                        current_size = current_size - pre_clean_size
+
+                #check if folder still exits
+                if os.path.isdir(folder):
+                    # if the folder exists, the current size is subtracted with the 
+                    # size of deleted files, which is the original sub folder size 
+                    # minus the niew sub folder size
+                    current_size = current_size - (pre_clean_size -
+                                            self.current_size(folder))
+                else:
+                    # if the folder does not exist, just subtract the current size with
+                    # the original sub folder size
+                    current_size = current_size - pre_clean_size
          
         return removed
