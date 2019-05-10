@@ -4,9 +4,10 @@ import tempfile
 import time
 import shutil
 import os
+import argparse
 import mock
 
-from mediaire_toolbox.data_cleaner import DataCleaner
+from mediaire_toolbox.data_cleaner import DataCleaner, main
 
 logging.basicConfig(format='%(asctime)s %(levelname)s  %(module)s:%(lineno)s '
                     '%(message)s', level=logging.DEBUG)
@@ -52,14 +53,19 @@ class TestUtils(unittest.TestCase):
         sub_folder_2 = tempfile.mkdtemp(dir=temp_folder)
 
         current_time = time.time()
+        
+        sub_folder_1_sizes = iter([500, 0, 0])
+        sub_folder_2_sizes = iter([2048-500, 0, 0])
 
         def current_size(folder):
-            """mock current size so that it shrinks to 500 bytes if 
+            """mock sub folder so that it shrinks to 0 bytes if 
                 one folder is deleted"""
-            folder_size = {temp_folder: 1024*2,
-                           sub_folder_1: 500,
-                           sub_folder_2: 1024*2-500}
-            return folder_size[folder]
+            if folder == sub_folder_1:
+                return next(sub_folder_1_sizes)
+            if folder == sub_folder_2:
+                return next(sub_folder_2_sizes)
+            if folder == temp_folder:
+                return 1024*2
 
         def creation_time(folder):
             return int(current_time - 10) if folder == sub_folder_1 else int(current_time - 20)
@@ -73,7 +79,7 @@ class TestUtils(unittest.TestCase):
                 # and remove old folders as long as total size exceed 1 MB
                 mock_cleaner = DataCleaner(temp_folder, 1024, 60 * 60 * 24)
 
-                removed = mock_cleaner.clean_up(dry_run=False)
+                removed = mock_cleaner.clean_up(dry_run=True)
                 self.assertTrue(len(removed) == 1)
                 self.assertEqual(removed[0], sub_folder_2)
                 shutil.rmtree(temp_folder)
@@ -108,16 +114,19 @@ class TestUtils(unittest.TestCase):
         sub_folder_3 = tempfile.mkdtemp(dir=temp_folder)
 
         current_time = time.time()
+        sub_folder_2_sizes = iter([200, 0, 0])
+        sub_folder_3_sizes = iter([1400, 0, 0])
 
         def current_size(folder):
             # will raise a value error if sub_folder_1 is passed to the function
-            try:
-                folder_size = {temp_folder: 1024*2,
-                               sub_folder_2: 200,
-                               sub_folder_3: 1400}
-                return folder_size[folder]
-            except:
+            if folder == sub_folder_2:
+                return next(sub_folder_2_sizes)
+            if folder == sub_folder_3:
+                return next(sub_folder_3_sizes)
+            if folder == sub_folder_1:
                 raise ValueError("Early termination failed")
+            if folder == temp_folder:
+                return 1024*2
 
         def creation_time(folder):
             folder_time = {sub_folder_1: int(current_time - 10),
@@ -134,7 +143,7 @@ class TestUtils(unittest.TestCase):
                 # if the function calls current_size with sub_folder_1, an error is raised
                 mock_cleaner = DataCleaner(temp_folder, 1024, -1)
                 try:
-                    removed = mock_cleaner.clean_up(dry_run=False)
+                    removed = mock_cleaner.clean_up(dry_run=True)
                 except:
                     self.fail("Early termination failed")
                 self.assertTrue(len(removed) == 1)
@@ -224,9 +233,26 @@ class TestUtils(unittest.TestCase):
                 # If using a filterlist as tested here, both folders will be cleaned. 
                 mock_cleaner = DataCleaner(temp_folder, 1024, -1,
                                            whitelist=["mock"])
-                removed = mock_cleaner.clean_up(dry_run=False)
+                removed = mock_cleaner.clean_up(dry_run=True)
 
                 self.assertTrue(len(removed) == 2)
                 self.assertEqual(removed[0], sub_folder_2)
                 self.assertEqual(removed[1], sub_folder_1)
                 shutil.rmtree(temp_folder)
+
+    def test_current_size(self):
+        """Test current size returns 0 on non existent folder"""
+        temp_folder = "/this_is_mock_path/"
+        self.assertTrue(DataCleaner.current_size(temp_folder) == 0)
+    
+    @mock.patch('argparse.ArgumentParser.parse_args',
+            return_value=argparse.Namespace(folder="/this_is_mock_path/",
+                                            max_folder_size=-1, max_data_seconds=-1,
+                                            blacklist=None, whitelist=None,
+                                            loglevel=logging.WARNING, dry_run=True))
+    def test_main(self, mock_args):
+        mock.patch
+        try:
+            main()
+        except:
+            self.fail("Main function of data_cleaner failed")

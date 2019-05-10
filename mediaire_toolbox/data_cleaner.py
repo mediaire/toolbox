@@ -187,7 +187,7 @@ class DataCleaner:
         return removed
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description='clean folder')
     parser.add_argument('--folder', nargs='?', const=1, type=str,
@@ -220,5 +220,8 @@ if __name__ == "__main__":
                                args.max_data_seconds,
                                whitelist=(filter_list if args.whitelist else None),
                                blacklist=(filter_list if args.blacklist else None))
-    data_cleaner.clean_up(dry_run=dry_run)
+    data_cleaner.clean_up(dry_run=dry_run)\
+
+if __name__ == "__main__":
+    main()
     
