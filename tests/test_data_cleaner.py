@@ -152,17 +152,16 @@ class TestUtils(unittest.TestCase):
 
     def test_both_whitelist_and_blacklist_instance(self):
         temp_folder = '/mock/path'
-        filter_list = ['Person1*.dcm']
+        filter_list = ['*.dcm']
         with self.assertRaises(ValueError):
             DataCleaner(temp_folder, -1, -1, whitelist=filter_list,
                         blacklist=filter_list)
         
     def test_blacklist(self):
         temp_folder = tempfile.mkdtemp(suffix='_test_6')
-        _, tmp_file_1 = tempfile.mkstemp(prefix='Person1', suffix='.dcm', dir=temp_folder)
-        _, tmp_file_2 = tempfile.mkstemp(prefix='Person2', suffix='.dcm', dir=temp_folder)
-
-        filter_list = ['Person1*.dcm']
+        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=temp_folder)
+        _, tmp_file_2 = tempfile.mkstemp(suffix='.nii', dir=temp_folder)
+        filter_list = ['*.dcm']
 
         mock_cleaner = DataCleaner(temp_folder, -1, -1, blacklist=filter_list)
         removed = mock_cleaner.clean_folder(temp_folder, dry_run=True)
@@ -172,10 +171,9 @@ class TestUtils(unittest.TestCase):
     
     def test_whitelist(self):
         temp_folder = tempfile.mkdtemp(suffix='_test_7')
-        _, tmp_file_1 = tempfile.mkstemp(prefix='Person1', suffix='.dcm', dir=temp_folder)
-        _, tmp_file_2 = tempfile.mkstemp(prefix='Person2', suffix='.dcm', dir=temp_folder)
-
-        filter_list = ['Person1*.dcm']
+        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=temp_folder)
+        _, tmp_file_2 = tempfile.mkstemp(suffix='.nii', dir=temp_folder)
+        filter_list = ['*.dcm']
 
         mock_cleaner = DataCleaner(temp_folder, -1, -1, whitelist=filter_list)
         removed = mock_cleaner.clean_folder(temp_folder, dry_run=True)
@@ -183,23 +181,41 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(removed[0], tmp_file_2)
         shutil.rmtree(temp_folder)
 
-    def test_remove_empty_folder_with_whitelist(self):
+    def test_remove_subdirectory_files_with_blacklist(self):
         temp_folder = tempfile.mkdtemp(suffix='_test_8')
-        _, tmp_file_1 = tempfile.mkstemp(prefix='Person1', suffix='.dcm', dir=temp_folder)
+        sub_folder_11 = tempfile.mkdtemp(suffix='subject1', dir=temp_folder)
+        sub_folder_21 = tempfile.mkdtemp(suffix='report', dir=sub_folder_11)
+        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=sub_folder_21)
+        _, tmp_file_2 = tempfile.mkstemp(suffix='.png', dir=sub_folder_21)
+        filter_list = ['*.dcm']
 
-        filter_list = ['Person1*.dcm']
-
-        mock_cleaner = DataCleaner(temp_folder, -1, -1, whitelist=filter_list)
-        mock_cleaner.clean_folder(temp_folder, dry_run=False)
-        self.assertTrue(os.path.isdir(temp_folder))
+        mock_cleaner = DataCleaner(temp_folder, -1, -1, blacklist=filter_list)
+        removed = mock_cleaner.clean_folder(temp_folder, dry_run=True)
+        self.assertTrue(len(removed) == 1)
+        self.assertEqual(removed[0], tmp_file_1)
         shutil.rmtree(temp_folder)
+
+
+    def test_remove_empty_folder_with_blacklist(self):
+        temp_folder = tempfile.mkdtemp(suffix='_test_9')
+        sub_folder_1 = tempfile.mkdtemp(suffix='dicom', dir=temp_folder)
+        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=sub_folder_1)
+
+        filter_list = ['*.dcm']
+
+        mock_cleaner = DataCleaner(temp_folder, -1, -1, blacklist=filter_list)
+        mock_cleaner.clean_folder(temp_folder, dry_run=False)
+        self.assertFalse(os.path.isdir(sub_folder_1))
+        self.assertFalse(os.path.isdir(temp_folder))
+        if os.path.isdir(temp_folder):
+            shutil.rmtree(temp_folder)
 
 
     def test_partially_remove(self):
         """
         Test removing the correct folders when partially removing files using a filter.
         """
-        temp_folder = tempfile.mkdtemp(suffix='_test_9')
+        temp_folder = tempfile.mkdtemp(suffix='_test_10')
         sub_folder_1 = tempfile.mkdtemp(dir=temp_folder)
         sub_folder_2 = tempfile.mkdtemp(dir=temp_folder)
 
@@ -251,7 +267,6 @@ class TestUtils(unittest.TestCase):
                                             blacklist=None, whitelist=None,
                                             loglevel=logging.WARNING, dry_run=True))
     def test_main(self, mock_args):
-        mock.patch
         try:
             main()
         except:

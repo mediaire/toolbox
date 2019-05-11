@@ -35,9 +35,9 @@ class DataCleaner:
             Max data age, delete folders that are older than this many seconds.
             -1 if not deleting files based on age.
         whitelist: list
-            Whitelist for files. Unix like filename pattern.
+            Whitelist for files. List of Unix like filename pattern strings.
         blacklist: list
-            Blacklist for files. Unix like filename pattern.
+            Blacklist for files. List of Unix like filename pattern strings.
         """
         self.base_folder = folder
         self.max_folder_size = max_folder_size
@@ -79,35 +79,29 @@ class DataCleaner:
         list
             Returns the list of files deleted.
         """
-        # the set of all files in the folder
-        file_set = set([f for f in os.listdir(folder)
-                        if os.path.isfile(os.path.join(folder, f))])
-        # empy folder, delete the folder
-        if not file_set:
-            if dry_run:
-                default_logger.info('(dry-run) Would remove folder [%s]' % folder)
-            else:
-                default_logger.info('Removing folder [%s]' % folder)
-                shutil.rmtree(folder)
-            return None
-        # the set of filtered filenames that match the whitelist/blacklist pattern
+        
+        # get all folders and files in the folder
+        file_list, folder_list = [], [folder]
+        for root, directories, filenames in os.walk(folder, topdown=False):
+            file_list = file_list + [os.path.join(root, filename)for filename in filenames]
+            folder_list = folder_list + [os.path.join(root, directory)for directory in directories]
+
+        # the set of all files
+        file_set = set(file_list)
+        # the set of filtered files that match the whitelist/blacklist pattern
         filtered_files_set = set()
-        # the list of patterns from whitelist/blacklist
-        filter_list = self.whitelist or self.blacklist
         # for every pattern in the whitelist/blacklist, match and join results
-        for f in filter_list:
+        for pattern in self.whitelist or self.blacklist:
             filtered_files_set = filtered_files_set.union(set(fnmatch.filter(
-                                          file_set, f)))
+                                                          file_set, pattern)))
 
         if self.whitelist:
             # if it is a whitelist, the list of deleted files are the files in the folder
             # but not on the matched filenames
-            delete_list = [os.path.join(folder, f) for f in 
-                           list(file_set - filtered_files_set)]
+            delete_list = list(file_set - filtered_files_set)
         else:
             # if it is a blacklist, the list of deleted files are the files with matched filenames
-            delete_list = [os.path.join(folder, f) for f in 
-                           list(filtered_files_set)]
+            delete_list = list(filtered_files_set)
 
         for file_path in delete_list:
             if dry_run:
@@ -115,10 +109,14 @@ class DataCleaner:
             else:
                 default_logger.info('Removing file [%s]' % file_path)
                 os.remove(file_path)
-        # remove the folder if it is empty
+
+        # remove the folder if it is empty after removing files
         if not dry_run:
-            if len(os.listdir(folder)) == 0:
-                shutil.rmtree(folder)
+            # start from the bottom
+            for directory in folder_list[::-1]:
+                if len(os.listdir(directory)) == 0:
+                    default_logger.info('Removing empty folder [%s]' % directory)
+                    os.rmdir(directory)
         return delete_list
 
     def clean_up(self, dry_run=False):
