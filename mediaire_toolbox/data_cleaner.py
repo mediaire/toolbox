@@ -6,6 +6,7 @@ import fnmatch
 import logging
 import argparse
 
+from mediaire_toolbox.logging.base_logging_conf import basic_logging_conf
 
 default_logger = logging.getLogger(__name__)
 
@@ -46,8 +47,9 @@ class DataCleaner:
         self.blacklist = blacklist
         if whitelist and blacklist:
             raise ValueError("Both black list and white list in instance")
-        default_logger.info("""Instantiated a DataCleaner on folder {%s} with max
-                            foldersize={%s} and max data seconds={%s}""" %
+        default_logger.info(("Instantiated a DataCleaner on folder {%s} "
+                            "with max foldersize={%s} and max data seconds={%s}")
+                             %
                             (folder, max_folder_size, max_data_seconds))
 
     @staticmethod
@@ -106,8 +108,8 @@ class DataCleaner:
 
         for file_path in delete_list:
             if dry_run:
-                default_logger.info('(dry-run) \
-                                    Would remove file [%s]' % file_path)
+                default_logger.info('(dry-run) - '
+                                    'Would remove file [%s]' % file_path)
             else:
                 default_logger.info('Removing file [%s]' % file_path)
                 os.remove(file_path)
@@ -117,8 +119,8 @@ class DataCleaner:
             # start from the bottom
             for directory in folder_list[::-1]:
                 if len(os.listdir(directory)) == 0:
-                    default_logger.info('Removing \
-                                        empty folder [%s]' % directory)
+                    default_logger.info('Removing '
+                                        'empty folder [%s]' % directory)
                     os.rmdir(directory)
         return delete_list
 
@@ -146,8 +148,8 @@ class DataCleaner:
             if not os.path.isdir(folder):
                 # ignoring files by now
                 continue
-            default_logger.debug('Considering sub folder %s with creation time\
-                                 %s' % (folder, self.creation_time(folder)))
+            default_logger.debug('Considering sub folder %s with creation time'
+                                 '%s' % (folder, self.creation_time(folder)))
             delete = False
 
             if (self.max_data_seconds > 0 and
@@ -164,8 +166,8 @@ class DataCleaner:
                 # base_folder is still too big, let's delete this sub folder
                 delete = True
                 default_logger.info(
-                    "Current total size is too big (%s bytes), need to \
-                    delete some data to free up space" % current_size)
+                    "Current total size is too big (%s bytes), need to "
+                    "delete some data to free up space" % current_size)
             if delete:
                 removed.append(folder)
                 pre_clean_size = self.current_size(folder)
@@ -176,8 +178,8 @@ class DataCleaner:
                 # if they don't exist delete the whole folder
                 else:
                     if dry_run:
-                        default_logger.info('(dry-run) \
-                                            Would remove folder [%s]' % folder)
+                        default_logger.info('(dry-run) - '
+                                            'Would remove folder [%s]' % folder)
                     else:
                         default_logger.info('Removing folder [%s]' % folder)
                         shutil.rmtree(folder)
@@ -205,14 +207,11 @@ def main():
     parser.add_argument('--blacklist', type=str, nargs='?',
                         help='blacklist pathname')
     parser.add_argument('--dry_run', action="store_true", default=False)
-    parser.add_argument('-d', '--debug',
-                        help="Set Log level for debug",
-                        action="store_const", dest="loglevel",
-                        const=logging.DEBUG, default=logging.WARNING,
-                        )
+
     args = parser.parse_args()
-    logging.basicConfig(level=args.loglevel)
     dry_run = args.dry_run
+    
+    basic_logging_conf()
 
     filter_path = args.blacklist or args.whitelist
     if filter_path:
