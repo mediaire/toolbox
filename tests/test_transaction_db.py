@@ -81,6 +81,7 @@ class TestTransactionDB(unittest.TestCase):
         t = t_db.get_transaction(t_id)
 
         self.assertEqual(t.task_state, TaskState.failed)
+        self.assertTrue(t.end_date > t.start_date)
         self.assertEqual(t.error, 'because it failed')
 
         t_db.close()
@@ -109,10 +110,12 @@ class TestTransactionDB(unittest.TestCase):
         t_id = t_db.create_transaction(tr_1)
 
         # to be called when a transaction is skipped
-        t_db.set_skipped(t_id)
+        t_db.set_skipped(t_id, 'because it is skipped')
         t = t_db.get_transaction(t_id)
 
         self.assertEqual(t.task_state, TaskState.skipped)
+        self.assertTrue(t.end_date > t.start_date)
+        self.assertEqual(t.error, 'because it is skipped')
 
         t_db.close()
 

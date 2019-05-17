@@ -152,14 +152,14 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def set_skipped(self, id_: int):
+    def set_skipped(self, id_: int, cause: str=''):
         """to be called when the transaction is skipped.
         Error field will be set explicitly to ''."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.skipped
             t.end_date = datetime.datetime.utcnow()
-            t.error = ''
+            t.error = cause
             self.session.commit()
         except:
             self.session.rollback()
