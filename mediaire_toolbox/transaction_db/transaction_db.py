@@ -157,7 +157,7 @@ class TransactionDB:
         Error field will be set explicitly to ''."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
-            t.task_state = TaskState.skipped
+            t.task_skipped = 1
             t.end_date = datetime.datetime.utcnow()
             t.error = cause
             self.session.commit()

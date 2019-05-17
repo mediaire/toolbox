@@ -27,6 +27,7 @@ class Transaction(Base):
     last_message = Column(String)
     error = Column(String())
     task_progress = Column(Integer, default=0)
+    task_skipped = Column(Integer, default=0)
 
     def to_dict(self):
         return { 'transaction_id': self.transaction_id,

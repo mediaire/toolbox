@@ -113,7 +113,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.set_skipped(t_id, 'because it is skipped')
         t = t_db.get_transaction(t_id)
 
-        self.assertEqual(t.task_state, TaskState.skipped)
+        self.assertEqual(t.task_skipped, 1)
         self.assertTrue(t.end_date > t.start_date)
         self.assertEqual(t.error, 'because it is skipped')
 

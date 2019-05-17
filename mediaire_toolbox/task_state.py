@@ -5,4 +5,3 @@ class TaskState(enum.Enum):
     processing = 2
     failed = 3
     completed = 4
-    skipped = 5
