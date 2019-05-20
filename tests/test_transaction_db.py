@@ -119,9 +119,25 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db.close()
 
+    def test_change_last_message(self):
+        engine = self._get_temp_db(6)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+
+        # to be called when a transaction is skipped
+        t_db.set_last_message(t_id, 'last_message')
+        t = t_db.get_transaction(t_id)
+
+        self.assertEqual(t.last_message, 'last_message')
+
+        t_db.close()
+
+
     @unittest.expectedFailure
     def test_fail_on_get_non_existing_transaction(self):
-        engine = self._get_temp_db(6)
+        engine = self._get_temp_db(7)
         t_db = TransactionDB(engine)
         t_db.get_transaction(1)
 
