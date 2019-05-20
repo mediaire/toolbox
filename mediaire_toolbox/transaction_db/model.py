@@ -44,7 +44,8 @@ class Transaction(Base):
                  'processing_state': self.processing_state,
                  'last_message': self.last_message,
                  'task_progress': self.task_progress,
-                 'error': self.error }
+                 'error': self.error,
+                 'task_skipped': self.task_skipped }
 
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (
