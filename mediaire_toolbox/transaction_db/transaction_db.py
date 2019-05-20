@@ -169,6 +169,8 @@ class TransactionDB:
             raise
 
     def set_last_message(self, id_: int, last_message: str):
+        """Updates the last_message field of the transaction
+        with the given string."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.last_message = last_message

@@ -126,7 +126,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1)
 
-        # to be called when a transaction is skipped
+        # update last_message field
         t_db.set_last_message(t_id, 'last_message')
         t = t_db.get_transaction(t_id)
 
