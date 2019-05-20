@@ -139,7 +139,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def set_completed(self, id_: int):
+    def set_completed(self, id_: int, clear_error: bool = True):
         """to be called when the transaction completes successfully.
         Error field will be set explicitly to '' and end_date automatically
         adjusted."""
@@ -147,7 +147,8 @@ class TransactionDB:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.completed
             t.end_date = datetime.datetime.utcnow()
-            t.error = ''
+            if clear_error:
+                t.error = ''
             self.session.commit()
         except:
             self.session.rollback()
