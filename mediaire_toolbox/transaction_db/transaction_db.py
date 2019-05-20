@@ -125,14 +125,15 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def set_failed(self, id_: int, cause: str):
+    def set_failed(self, id_: int, cause: str = None):
         """to be called when a transaction fails. Save error information
         from 'cause'"""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.failed
             t.end_date = datetime.datetime.utcnow()
-            t.error = cause
+            if cause:
+                t.error = cause
             self.session.commit()
         except:
             self.session.rollback()
