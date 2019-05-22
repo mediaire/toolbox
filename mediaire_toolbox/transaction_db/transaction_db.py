@@ -125,15 +125,14 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def set_failed(self, id_: int, cause: str = None):
+    def set_failed(self, id_: int, cause: str):
         """to be called when a transaction fails. Save error information
         from 'cause'"""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.failed
             t.end_date = datetime.datetime.utcnow()
-            if cause:
-                t.error = cause
+            t.error = cause
             self.session.commit()
         except:
             self.session.rollback()
@@ -141,8 +140,8 @@ class TransactionDB:
 
     def set_completed(self, id_: int, clear_error: bool = True):
         """to be called when the transaction completes successfully.
-        Error field will be set explicitly to '' and end_date automatically
-        adjusted."""
+        Error field will be set to '' only if clear_error = True.
+        End_date automatically adjusted."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.completed
@@ -155,8 +154,8 @@ class TransactionDB:
             raise
 
     def set_skipped(self, id_: int, cause: str = None):
-        """to be called when the transaction is skipped.
-        Error field will be set explicitly to ''."""
+        """to be called when the transaction is skipped. Save skip information
+        from 'cause'"""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_skipped = 1
