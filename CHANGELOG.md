@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.14.0] - 2019-05-28
+* DEV-412 Add skipped state to TransactionDB
+* DEV-318 Task object refactor follow-up: delete input output field in tasks and delete DicomTask
+* DEV-384 Optimize data cleaner
+
 ## [0.13.0] - 2019-04-18
 * Fix DataCleaner - do nothing if -1 for both space and time
 
