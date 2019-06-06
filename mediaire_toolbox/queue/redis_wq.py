@@ -6,6 +6,7 @@ import redis
 import uuid
 import hashlib
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -94,8 +95,43 @@ class RedisWQ(object):
     def put(self, item):
         self._db.lpush(self._main_q_key, item)
 
+    @staticmethod
+    def _get_timestamp():
+        return time.gmtime(time.time()).tm_min
+
+    def _limit_rate(self, limit):
+        """
+        Limits the rate of items leased in the queue. Counts the leases
+        at each minute, after the limit is reached, no more leases are allowed.
+
+        Parameters
+        ----------
+        limit: int
+            Maximum leases per minute, Negative if there is no limit.
+
+        Returns
+        -------
+        bool
+            True if limit not reached, False if lease hit maximum rate.
+        """
+        if not limit or limit < 0:
+            return True
+        minute = self._get_timestamp()
+        rate_key = "{}:limit:{}".format(self._session, str(minute))
+        result = self._db.get(rate_key)
+        if result:
+            if result[0] >= limit:
+                return False
+        self._db.get(rate_key)
+        # atomic operation
+        pipe = self._db.pipeline()
+        pipe.incr(rate_key)
+        pipe.expire(rate_key, 60)
+        pipe.execute()
+        return True
+
     # for now `lease_secs` is useless!
-    def lease(self, lease_secs=5, block=True, timeout=None):
+    def lease(self, lease_secs=5, block=True, timeout=None, limit=-1):
         """Begin working on an item the work queue.
 
         Lease the item for lease_secs.  After that time, other
@@ -116,6 +152,10 @@ class RedisWQ(object):
             # Note: if we crash at this line of the program, then GC will
             # see no lease
             # for this item a later return it to the main queue.
+            while True:
+                if self._limit_rate(limit):
+                    break
+                time.sleep(10)
             itemkey = self._itemkey(item)
             logger.info('{} -> {}'.format(self._lease_key_prefix + itemkey,
                                           self._session))
