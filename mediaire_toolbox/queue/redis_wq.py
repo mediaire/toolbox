@@ -97,10 +97,26 @@ class RedisWQ(object):
         self._db.lpush(self._main_q_key, item)
 
     @staticmethod
-    def _get_timestamp():
-        return time.gmtime(time.time()).tm_min
+    def _get_timestamp(timeunit):
+        if timeunit == 'sec':
+            return time.gmtime(time.time()).tm_sec
+        if timeunit == 'minute':
+            return time.gmtime(time.time()).tm_min
+        if timeunit == 'hour':
+            return time.gmtime(time.time()).tm_hour
+        return RedisWQ._get_timestamp('minute')
 
-    def _limit_rate(self, limit):
+    @staticmethod
+    def _get_expirytime(timeunit):
+        if timeunit == 'sec':
+            return 1
+        if timeunit == 'minute':
+            return 60
+        if timeunit == 'hour':
+            return 60*60
+        return RedisWQ._get_expirytime('minute')
+
+    def _limit_rate(self, limit, timeunit):
         """
         Limits the rate of items leased in the queue. Counts the leases
         at each minute, after the limit is reached, no more leases are allowed.
@@ -117,20 +133,22 @@ class RedisWQ(object):
         """
         if not limit or limit < 0:
             return True
-        minute = self._get_timestamp()
-        rate_key = self._limit_key_prefix + str(minute)
+        timestamp = self._get_timestamp(timeunit)
+        rate_key = self._limit_key_prefix + str(timestamp)
         result = self._db.get(rate_key)
-        if result and result >= limit:
+        if (result and result >= limit) or limit == 0:
             return False
         # atomic operation
+        expiry_time = self._get_expirytime
         pipe = self._db.pipeline()
         pipe.incr(rate_key)
-        pipe.expire(rate_key, 60)
+        pipe.expire(rate_key, expiry_time)
         pipe.execute()
         return True
 
     # for now `lease_secs` is useless!
-    def lease(self, lease_secs=5, block=True, timeout=None, limit=-1):
+    def lease(self, lease_secs=5, block=True, timeout=None,
+              limit=-1, timeunit='hour'):
         """Begin working on an item the work queue.
 
         Lease the item for lease_secs.  After that time, other
@@ -152,7 +170,7 @@ class RedisWQ(object):
             # see no lease
             # for this item a later return it to the main queue.
             while True:
-                if self._limit_rate(limit):
+                if self._limit_rate(limit, timeunit):
                     break
                 time.sleep(10)
             itemkey = self._itemkey(item)
