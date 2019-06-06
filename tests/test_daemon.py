@@ -29,7 +29,7 @@ class MockQueue(RedisWQ):
         self.completed = False
         self.error_msg = None
 
-    def lease(self, lease_secs=5, block=True, timeout=None):
+    def lease(self, lease_secs=5, block=True, timeout=None, limit=-1):
         return self.serialized_task
 
     def error(self, value, msg=None):
