@@ -139,7 +139,7 @@ class RedisWQ(object):
         if (result and result >= limit) or limit == 0:
             return False
         # atomic operation
-        expiry_time = self._get_expirytime
+        expiry_time = self._get_expirytime(timeunit)
         pipe = self._db.pipeline()
         pipe.incr(rate_key)
         pipe.expire(rate_key, expiry_time)

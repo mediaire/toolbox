@@ -75,6 +75,8 @@ class TestRedisWQ(unittest.TestCase):
             # same timestamp lease request over limit, should return False
             self.assertFalse(self.r_wq._limit_rate(1, 'hour'))
             self.assertTrue(len(self.mock_redis.expiremap.items()) == 1)
+            self.assertEqual(self.mock_redis.expiremap
+                             ['mock_limit_rate:limit:0'], 60 * 60)
 
     def test_limit_rate_reset(self):
         """Test that the limit counter refreshes in the next time bucket"""
