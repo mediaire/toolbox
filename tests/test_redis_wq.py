@@ -17,7 +17,7 @@ class MockRedis():
 
     def get(self, key):
         if key in self.hashmap:
-            return [self.hashmap[key]]
+            return self.hashmap[key]
         else:
             return None
 

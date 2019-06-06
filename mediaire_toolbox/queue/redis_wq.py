@@ -44,6 +44,7 @@ class RedisWQ(object):
         self._error_q_key = name + ":errors"
         self._error_messages_q_key = name + ":error_messages"
         self._lease_key_prefix = name + ":leased_by_session:"
+        self._limit_key_prefix = name + ":limit:"
 
     def sessionID(self):
         """Return the ID for this session."""
@@ -117,12 +118,10 @@ class RedisWQ(object):
         if not limit or limit < 0:
             return True
         minute = self._get_timestamp()
-        rate_key = "{}:limit:{}".format(self._session, str(minute))
+        rate_key = self._limit_key_prefix + str(minute)
         result = self._db.get(rate_key)
-        if result:
-            if result[0] >= limit:
-                return False
-        self._db.get(rate_key)
+        if result and result >= limit:
+            return False
         # atomic operation
         pipe = self._db.pipeline()
         pipe.incr(rate_key)

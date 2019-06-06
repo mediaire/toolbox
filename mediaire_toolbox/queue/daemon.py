@@ -57,8 +57,11 @@ class QueueDaemon(ABC):
     def run_once(self):
         logger.info('Waiting for items from queue {}'.format(
             self.input_queue._main_q_key))
+        limit = -1
+        if 'lease_limit' in self.config:
+            limit = self.config['lease_limit']
         item = self.input_queue.lease(
-            lease_secs=self.lease_secs, block=True)
+            lease_secs=self.lease_secs, block=True, limit=limit)
         try:
             # TODO Make this class a parameter for better generalization
             # how to do reflection in python?
