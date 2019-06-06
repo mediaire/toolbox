@@ -7,6 +7,7 @@ import uuid
 import hashlib
 import logging
 import time
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,8 @@ class RedisWQ(object):
         timestamp = self._get_timestamp(timeunit)
         rate_key = self._limit_key_prefix + str(timestamp)
         result = self._db.get(rate_key)
-        if (result and result >= limit) or limit == 0:
+        result = int.from_bytes(result, sys.byteorder) if result else 0
+        if result >= limit:
             return False
         # atomic operation
         expiry_time = self._get_expirytime(timeunit)
@@ -172,7 +174,12 @@ class RedisWQ(object):
             while True:
                 if self._limit_rate(limit, timeunit):
                     break
-                time.sleep(10)
+                sleeptime = (timeunit=='sec')*1\
+                             + (timeunit=='min')*10\
+                             + (timeunit=='hour')*60
+                logger.info('Limit {} per {} for queue {} reached, wait {} secs'
+                            .format(limit, timeunit, self._main_q_key, sleeptime))
+                time.sleep(sleeptime)
             itemkey = self._itemkey(item)
             logger.info('{} -> {}'.format(self._lease_key_prefix + itemkey,
                                           self._session))
