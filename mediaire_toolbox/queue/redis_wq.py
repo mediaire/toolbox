@@ -155,13 +155,8 @@ class RedisWQ(object):
               limit=-1, timeunit='hour'):
         """Begin working on an item the work queue.
         Check if rate reached limit on work queue. If reached, wait until
-        next timunit.
-        Lease the item for lease_secs.  After that time, other
-        workers may consider this client to have crashed or stalled
-        and pick up the item instead.
-
-        If optional args block is true and timeout is None (the default), block
-        if necessary until an item is available.
+        next timeunit.
+        If not, then lease item.
 
         Parameters
         ----------
@@ -170,7 +165,10 @@ class RedisWQ(object):
             workers may consider this client to have crashed or stalled
             and pick up the item instead.
         block:
+            True if block until an item is available.
         timeout:
+            Timeout for blocking until an item is available. None to wait
+            unlimited time.
         limit: int
             Maximum leases per timeunit, Negative if there is no limit.
         timeunit: str
