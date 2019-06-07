@@ -46,17 +46,20 @@ class TestRedisWQ(unittest.TestCase):
         self.mock_redis = MockRedis()
         self.r_wq = RedisWQ(name='mock_limit_rate', db=self.mock_redis)
 
-    def test_get_expiry_time_sec(self):
-        self.assertEqual(RedisWQ._get_expirytime('sec'), 1)
+    def test_get_timestamp_invalid(self):
+        self.assertRaises(ValueError, RedisWQ._get_timestamp, 'invalid')
 
-    def test_get_expiry_time_min(self):
-        self.assertEqual(RedisWQ._get_expirytime('min'), 60)
+    def test_limit_get_expiry_time_sec(self):
+        self.assertEqual(RedisWQ._get_limit_expirytime('sec'), 1)
 
-    def test_get_expiry_time_hour(self):
-        self.assertEqual(RedisWQ._get_expirytime('hour'), 60*60)
+    def test_limit_get_expiry_time_min(self):
+        self.assertEqual(RedisWQ._get_limit_expirytime('min'), 60)
 
-    def test_get_expiry_time_invalid(self):
-        self.assertEqual(RedisWQ._get_expirytime('invalid'), 60)
+    def test_limit_get_expiry_time_hour(self):
+        self.assertEqual(RedisWQ._get_limit_expirytime('hour'), 60*60)
+
+    def test_limit_get_expiry_time_invalid(self):
+        self.assertRaises(ValueError, RedisWQ._get_limit_expirytime, 'invalid')
 
     def test_limit_rate_no_limit(self):
         # test when no limit, leasing object
@@ -66,7 +69,7 @@ class TestRedisWQ(unittest.TestCase):
     def test_limit_rate_zero(self):
         with patch.object(RedisWQ, '_get_timestamp') as mock_get_timestamp:
             mock_get_timestamp.return_value = 0
-            self.assertTrue(self.r_wq._limit_rate(0, 'hour'))
+            self.assertFalse(self.r_wq._limit_rate(0, 'hour'))
 
     def test_limit_rate(self):
         """Test that the limit rate function limits the rate"""
@@ -107,3 +110,20 @@ class TestRedisWQ(unittest.TestCase):
             self.assertTrue(self.r_wq.lease(block=False, limit=1) == 1)
             # sleep function in lease should be called once
             self.assertTrue(mock_sleep.call_count == 1)
+
+    def test_lease_without_limit(self):
+        """Test that the lease returns the item with no limit rate"""
+        self.mock_redis.hashmap[self.r_wq._main_q_key] = [1, 2]
+        self.mock_redis.hashmap[self.r_wq._processing_q_key] = []
+        with patch('time.sleep') as mock_sleep, \
+                patch.object(RedisWQ, '_itemkey') as mock_item_key:
+            mock_sleep.return_value = lambda: None
+            def get_item_key(key): return ""
+            mock_item_key.side_effect = get_item_key
+            # directly return item
+            self.assertTrue(self.r_wq.lease(block=False, limit=-1) == 2)
+            # rate limit process triggered, limit rate function called twice
+            self.assertTrue(self.r_wq.lease(block=False, limit=-1) == 1)
+            # sleep function in lease should not be called
+            self.assertTrue(mock_sleep.call_count == 0)
+

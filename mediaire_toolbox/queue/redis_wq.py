@@ -101,38 +101,40 @@ class RedisWQ(object):
     def _get_timestamp(timeunit):
         if timeunit == 'sec':
             return time.gmtime(time.time()).tm_sec
-        if timeunit == 'minute':
+        if timeunit == 'min':
             return time.gmtime(time.time()).tm_min
         if timeunit == 'hour':
             return time.gmtime(time.time()).tm_hour
-        return RedisWQ._get_timestamp('minute')
+        raise ValueError('Invalid timeunit {}'.format(timeunit))
 
     @staticmethod
-    def _get_expirytime(timeunit):
+    def _get_limit_expirytime(timeunit):
         if timeunit == 'sec':
             return 1
-        if timeunit == 'minute':
+        if timeunit == 'min':
             return 60
         if timeunit == 'hour':
             return 60*60
-        return RedisWQ._get_expirytime('minute')
+        raise ValueError('Invalid timeunit {}'.format(timeunit))
 
     def _limit_rate(self, limit, timeunit):
         """
         Limits the rate of items leased in the queue. Counts the leases
-        at each minute, after the limit is reached, no more leases are allowed.
+        at each timeunit, after the limit is reached, no more leases are allowed.
 
         Parameters
         ----------
         limit: int
-            Maximum leases per minute, Negative if there is no limit.
+            Maximum leases per timeunit, Negative if there is no limit.
+        timeunit: str
+            Timeunit of the rate limiter. Either 'sec', 'min' or 'hour'
 
         Returns
         -------
         bool
             True if limit not reached, False if lease hit maximum rate.
         """
-        if not limit or limit < 0:
+        if limit < 0:
             return True
         timestamp = self._get_timestamp(timeunit)
         rate_key = self._limit_key_prefix + str(timestamp)
@@ -140,8 +142,8 @@ class RedisWQ(object):
         result = int.from_bytes(result, sys.byteorder) if result else 0
         if result >= limit:
             return False
+        expiry_time = self._get_limit_expirytime(timeunit)
         # atomic operation
-        expiry_time = self._get_expirytime(timeunit)
         pipe = self._db.pipeline()
         pipe.incr(rate_key)
         pipe.expire(rate_key, expiry_time)
@@ -152,13 +154,33 @@ class RedisWQ(object):
     def lease(self, lease_secs=5, block=True, timeout=None,
               limit=-1, timeunit='hour'):
         """Begin working on an item the work queue.
-
+        Check if rate reached limit on work queue. If reached, wait until
+        next timunit.
         Lease the item for lease_secs.  After that time, other
         workers may consider this client to have crashed or stalled
         and pick up the item instead.
 
         If optional args block is true and timeout is None (the default), block
-        if necessary until an item is available."""
+        if necessary until an item is available.
+
+        Parameters
+        ----------
+        lease_secs:
+            Lease the item for lease_secs.  After that time, other
+            workers may consider this client to have crashed or stalled
+            and pick up the item instead.
+        block:
+        timeout:
+        limit: int
+            Maximum leases per timeunit, Negative if there is no limit.
+        timeunit: str
+            Timeunit of the rate limiter. Either 'sec', 'min' or 'hour'
+
+        Returns
+        -------
+        bytes
+            Leased item in bytes.
+        """
         if block:
             item = self._db.brpoplpush(self._main_q_key,
                                        self._processing_q_key, timeout=timeout)
@@ -174,9 +196,9 @@ class RedisWQ(object):
             while True:
                 if self._limit_rate(limit, timeunit):
                     break
-                sleeptime = (timeunit=='sec')*1\
-                             + (timeunit=='min')*10\
-                             + (timeunit=='hour')*60
+                sleeptime = (timeunit == 'sec')*1\
+                             + (timeunit == 'min')*10\
+                             + (timeunit == 'hour')*60
                 logger.info('Limit {} per {} for queue {} reached, wait {} secs'
                             .format(limit, timeunit, self._main_q_key, sleeptime))
                 time.sleep(sleeptime)
