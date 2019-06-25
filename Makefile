@@ -27,3 +27,9 @@ test:
 
 lint:
 	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) flake8 $(PROJECT)
+
+bandit:
+	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) bandit -r $(PROJECT)
+
+safety:
+	docker run $(IMAGE_BASE_NAME):$(IMAGE_TAG) safety check -r /src/requirements.txt

@@ -1,5 +1,8 @@
 FROM python:3.5-alpine
 
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
 COPY requirements.txt /src/requirements.txt
 
 WORKDIR /src
