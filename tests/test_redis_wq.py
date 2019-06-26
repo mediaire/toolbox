@@ -46,8 +46,8 @@ class TestRedisWQ(unittest.TestCase):
         self.mock_redis = MockRedis()
         self.r_wq = RedisWQ(name='mock_limit_rate', db=self.mock_redis)
 
-    def test_get_timestamp_invalid(self):
-        self.assertRaises(ValueError, RedisWQ._get_timestamp, 'invalid')
+    def test_get_limit_key_invalid(self):
+        self.assertRaises(ValueError, RedisWQ._get_limit_key, 'invalid')
 
     def test_limit_get_expiry_time_sec(self):
         self.assertEqual(RedisWQ._get_limit_expirytime('sec'), 1)
@@ -67,14 +67,14 @@ class TestRedisWQ(unittest.TestCase):
         self.assertTrue(self.r_wq._limit_rate(-1, 'hour'))
 
     def test_limit_rate_zero(self):
-        with patch.object(RedisWQ, '_get_timestamp') as mock_get_timestamp:
-            mock_get_timestamp.return_value = 0
+        with patch.object(RedisWQ, '_get_limit_key') as mock_get_limit_key:
+            mock_get_limit_key.return_value = 0
             self.assertFalse(self.r_wq._limit_rate(0, 'hour'))
 
     def test_limit_rate(self):
         """Test that the limit rate function limits the rate"""
-        with patch.object(RedisWQ, '_get_timestamp') as mock_get_timestamp:
-            mock_get_timestamp.return_value = 0
+        with patch.object(RedisWQ, '_get_limit_key') as mock_get_limit_key:
+            mock_get_limit_key.return_value = 0
             # request lease, should return True
             self.assertTrue(self.r_wq._limit_rate(1, 'hour'))
             # same timestamp lease request over limit, should return False
@@ -85,8 +85,8 @@ class TestRedisWQ(unittest.TestCase):
 
     def test_limit_rate_reset(self):
         """Test that the limit counter refreshes in the next time bucket"""
-        with patch.object(RedisWQ, '_get_timestamp') as mock_get_timestamp:
-            mock_get_timestamp.side_effect = [0, 1]
+        with patch.object(RedisWQ, '_get_limit_key') as mock_get_limit_key:
+            mock_get_limit_key.side_effect = [0, 1]
             self.assertTrue(self.r_wq._limit_rate(1, 'hour'))
             # different timestamp lease request, return True
             self.assertTrue(self.r_wq._limit_rate(1, 'hour'))
@@ -97,11 +97,11 @@ class TestRedisWQ(unittest.TestCase):
         self.mock_redis.hashmap[self.r_wq._main_q_key] = [1, 2]
         self.mock_redis.hashmap[self.r_wq._processing_q_key] = []
         with patch('time.sleep') as mock_sleep, \
-            patch.object(RedisWQ, '_get_timestamp') as mock_get_timestamp, \
+            patch.object(RedisWQ, '_get_limit_key') as mock_get_limit_key, \
                 patch.object(RedisWQ, '_itemkey') as mock_item_key:
             mock_sleep.return_value = lambda: None
             # limit rate function is called three times at these timestamps
-            mock_get_timestamp.side_effect = [0, 0, 1]
+            mock_get_limit_key.side_effect = [0, 0, 1]
             def get_item_key(key): return ""
             mock_item_key.side_effect = get_item_key
             # directly return item

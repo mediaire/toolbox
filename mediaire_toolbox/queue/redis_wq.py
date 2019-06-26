@@ -98,7 +98,7 @@ class RedisWQ(object):
         self._db.lpush(self._main_q_key, item)
 
     @staticmethod
-    def _get_timestamp(timeunit):
+    def _get_limit_key(timeunit):
         if timeunit == 'sec':
             return time.gmtime(time.time()).tm_sec
         if timeunit == 'min':
@@ -109,6 +109,12 @@ class RedisWQ(object):
 
     @staticmethod
     def _get_limit_expirytime(timeunit):
+        """
+        Returns the expirytime of a key of the rate limiter
+        The rate limited if the leases of a timeunit reaches its limit.
+        That is also why an expirytime of the counter must be set in order
+        for the counter to be reset to 0 in the next cycle.
+        """
         if timeunit == 'sec':
             return 1
         if timeunit == 'min':
@@ -136,8 +142,8 @@ class RedisWQ(object):
         """
         if limit < 0:
             return True
-        timestamp = self._get_timestamp(timeunit)
-        rate_key = self._limit_key_prefix + str(timestamp)
+        key = self._get_limit_key(timeunit)
+        rate_key = self._limit_key_prefix + str(key)
         result = self._db.get(rate_key)
         result = int.from_bytes(result, sys.byteorder) if result else 0
         if result >= limit:
@@ -191,14 +197,12 @@ class RedisWQ(object):
             # Note: if we crash at this line of the program, then GC will
             # see no lease
             # for this item a later return it to the main queue.
+            logger.info('Leasing item from queue {} with Limit {} per {}'
+                        .format(self._main_q_key, limit, timeunit))
             while True:
                 if self._limit_rate(limit, timeunit):
                     break
-                sleeptime = (timeunit == 'sec')*1\
-                             + (timeunit == 'min')*10\
-                             + (timeunit == 'hour')*60
-                logger.info('Limit {} per {} for queue {} reached, wait {} secs'
-                            .format(limit, timeunit, self._main_q_key, sleeptime))
+                sleeptime = 1.0
                 time.sleep(sleeptime)
             itemkey = self._itemkey(item)
             logger.info('{} -> {}'.format(self._lease_key_prefix + itemkey,
