@@ -114,6 +114,11 @@ class RedisWQ(object):
         The rate limited if the leases of a timeunit reaches its limit.
         That is also why an expirytime of the counter must be set in order
         for the counter to be reset to 0 in the next cycle.
+
+        Returns
+        -------
+        int
+            seconds of lifetime for each bucket
         """
         if timeunit == 'sec':
             return 1
