@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-RELEASE_TYPES="('major', 'minor', 'patch')"
+RELEASE_TYPES="('major', 'minor', 'patch ,'automatic_version_bump')"
 USAGE="release.sh <project_folder> <release_type (one of: ${RELEASE_TYPES})>"
 
 error_trap() {
@@ -8,7 +8,7 @@ error_trap() {
 }
 
 #
-# Make sure the user inputs two non-empty arguments
+# Either input
 #
 if [ -z "$1" ] || [ -z "$2" ]; then
     error_trap "$USAGE" 
@@ -16,10 +16,15 @@ fi
 
 cd $1 || error_trap "Non-existent folder: $1"
 
-PROJECT_NAME=`basename "$PWD"`
+
+PROJECT_NAME=`basename "$(pwd)"`
 TYPE=$2
 VERSION_FILE="${PROJECT_NAME}/__init__.py"
-
+echo "$TYPE"
+if [ "$TYPE" = "automatic_version_bump" ]
+then
+    AUTO_MODE="true"
+fi
 #
 # Make sure the project has a valid __init__.py file
 #
@@ -27,13 +32,21 @@ if [ ! -f ${VERSION_FILE} ]; then
     error_trap "${VERSION_FILE} file not found... is the project malformed?"
 fi
 
+# in ci, git is in headless mode, thus checkout to head
+if [ "$AUTO_MODE" = "true" ]
+then
+    git checkout $CI_COMMIT_REF_NAME
+    git pull origin $CI_COMMIT_REF_NAME
+fi
+
 #
 # Make sure we're running on master before releasing
 #
+
 branch_name=$(git symbolic-ref -q HEAD)
 branch_name=${branch_name##refs/heads/}
 branch_name=${branch_name:-HEAD}
-if [ ! ${branch_name} == "master" ]; then
+if [ ! ${branch_name} = "master" ]; then
     error_trap "Can only release when on master - current branch is ${branch_name}."    
 fi
 
@@ -52,7 +65,7 @@ echo "Last tag is: '${last_tag}'"
 # We require that the project is always in a consistent state
 #
 current_version=`grep -Pzo "(?s)__version__\s*=\s*('|\")\K(\d+.\d+.\d+)" ${VERSION_FILE}`
-if [ ! ${current_version} == ${last_tag} ]; then
+if [ ! ${current_version} = ${last_tag} ]; then
     error_trap "Current version ${current_version} differs from last tag: ${last_tag}. Please reset the status of the project to a consistent state."
 fi
 
@@ -66,28 +79,40 @@ if [ -z "$change_log" ]; then
 fi
 printf "Change log will be released:\n\n${change_log}\n\n"
 
-#
+# get last commit message
+commit_message=$(git log -1 --pretty=%B)
+if [ "$AUTO_MODE" = "true" ]
+then
+    TYPE="patch"
+
+    case "$commit_message" in
+    *"[MAJOR]"*) TYPE="major"
+    ;;
+    *"[MINOR]"*) TYPE="minor"
+    ;;
+    *"[PATCH]"*) TYPE="patch"
+    ;;
+    esac
+fi
+
 # Parse the major/minor/patch versions and generate a new version
 #
 major_version=`echo ${current_version} | cut -d '.' -f1`
 minor_version=`echo ${current_version} | cut -d '.' -f2`
 patch_version=`echo ${current_version} | cut -d '.' -f3`
 
-if [ $TYPE == "major" ]
+if [ $TYPE = "major" ]
 then
     major_version=$((major_version + 1))
     minor_version=0
-    patch_version=0 
-elif [ $TYPE == "minor" ]
+    patch_version=0
+elif [ $TYPE = "minor" ]
 then
     minor_version=$((minor_version + 1))
-    patch_version=0 
-elif [ $TYPE == "patch" ]
+    patch_version=0
+elif [ $TYPE = "patch" ]
 then
     patch_version=$((patch_version + 1))
-else
-    echo "Unknown release type, must be one of: ${RELEASE_TYPES}" >&2
-    exit 1
 fi
 
 new_version="${major_version}.${minor_version}.${patch_version}"
@@ -116,14 +141,21 @@ END
 #
 # Perform final operations
 #
+
 echo "Bumping and tagging new version in Git..."
+if [ "$AUTO_MODE" = "true" ]
+then
+    url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
+    git remote set-url origin "https://${CI_PUSH}:${CI_PUSH_TOKEN}@${url_host}"
+    git config user.email 'dummy@email.com'
+    git config user.name 'automatic_version_bot'
+fi
+echo "$(git remote get-url origin)"
 git commit -a -m "Automatic version bump (release.sh)" || error_trap "Error issuing git commit"
 git tag ${new_version} || error_trap "Error issuing git tag"
 git push origin master || error_trap "Error issuing git push"
-git push --tags || error_trap "Error issuing git push --tags"
-
-echo "Building and pushing new image..."
-make build || error_trap "Error building new image"
-make push || error_trap "Error pushing new image"
+git push --tags || error_trap "Error issuing git push --tags"   
 
 echo "All operations done."
+
+# make build and push to registries
