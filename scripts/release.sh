@@ -1,6 +1,6 @@
 #!/bin/sh
 
-RELEASE_TYPES="('major', 'minor', 'patch ,'automatic_version_bump')"
+RELEASE_TYPES="('major', 'minor', 'patch' ,'automatic_version_bump')"
 USAGE="release.sh <project_folder> <release_type (one of: ${RELEASE_TYPES})>"
 
 error_trap() {
