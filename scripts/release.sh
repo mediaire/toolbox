@@ -20,7 +20,6 @@ cd $1 || error_trap "Non-existent folder: $1"
 PROJECT_NAME=`basename "$(pwd)"`
 TYPE=$2
 VERSION_FILE="${PROJECT_NAME}/__init__.py"
-echo "$TYPE"
 if [ "$TYPE" = "automatic_version_bump" ]
 then
     AUTO_MODE="true"
@@ -79,10 +78,12 @@ if [ -z "$change_log" ]; then
 fi
 printf "Change log will be released:\n\n${change_log}\n\n"
 
-# get last commit message
-commit_message=$(git log -1 --pretty=%B)
+#
+# Get release type from last commit message
+#
 if [ "$AUTO_MODE" = "true" ]
 then
+    commit_message=$(git log -1 --pretty=%B)
     TYPE="patch"
 
     case "$commit_message" in
@@ -150,7 +151,6 @@ then
     git config user.email 'dummy@email.com'
     git config user.name 'automatic_version_bot'
 fi
-echo "$(git remote get-url origin)"
 git commit -a -m "Automatic version bump (release.sh)" || error_trap "Error issuing git commit"
 git tag ${new_version} || error_trap "Error issuing git tag"
 git push origin master || error_trap "Error issuing git push"
