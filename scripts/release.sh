@@ -147,7 +147,7 @@ echo "Bumping and tagging new version in Git..."
 if [ "$AUTO_MODE" = "true" ]
 then
     url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
-    git remote set-url origin "https://${CI_PUSH}:${CI_PUSH_TOKEN}@${url_host}"
+    git remote set-url origin "https://${CI_PUSH_USER}:${CI_PUSH_TOKEN}@${url_host}"
     git config user.email 'dummy@email.com'
     git config user.name 'automatic_version_bot'
 fi
