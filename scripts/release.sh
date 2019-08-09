@@ -1,6 +1,6 @@
 #!/bin/sh
 
-RELEASE_TYPES="('major', 'minor', 'patch' ,'automatic_version_bump')"
+RELEASE_TYPES="('major', 'minor', 'patch')"
 USAGE="release.sh <project_folder> <release_type (one of: ${RELEASE_TYPES})>"
 
 error_trap() {
@@ -20,22 +20,12 @@ cd $1 || error_trap "Non-existent folder: $1"
 PROJECT_NAME=`basename "$(pwd)"`
 TYPE=$2
 VERSION_FILE="${PROJECT_NAME}/__init__.py"
-if [ "$TYPE" = "automatic_version_bump" ]
-then
-    AUTO_MODE="true"
-fi
+
 #
 # Make sure the project has a valid __init__.py file
 #
 if [ ! -f ${VERSION_FILE} ]; then
     error_trap "${VERSION_FILE} file not found... is the project malformed?"
-fi
-
-# in ci, git is in headless mode, thus checkout to head
-if [ "$AUTO_MODE" = "true" ]
-then
-    git checkout $CI_COMMIT_REF_NAME
-    git pull origin $CI_COMMIT_REF_NAME
 fi
 
 #
@@ -77,24 +67,6 @@ if [ -z "$change_log" ]; then
     exit 1
 fi
 printf "Change log will be released:\n\n${change_log}\n\n"
-
-#
-# Get release type from last commit message
-#
-if [ "$AUTO_MODE" = "true" ]
-then
-    commit_message=$(git log -1 --pretty=%B)
-    TYPE="patch"
-
-    case "$commit_message" in
-    *"[MAJOR]"*) TYPE="major"
-    ;;
-    *"[MINOR]"*) TYPE="minor"
-    ;;
-    *"[PATCH]"*) TYPE="patch"
-    ;;
-    esac
-fi
 
 # Parse the major/minor/patch versions and generate a new version
 #
@@ -144,13 +116,6 @@ END
 #
 
 echo "Bumping and tagging new version in Git..."
-if [ "$AUTO_MODE" = "true" ]
-then
-    url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
-    git remote set-url origin "https://${CI_PUSH_USER}:${CI_PUSH_TOKEN}@${url_host}"
-    git config user.email 'dummy@email.com'
-    git config user.name 'automatic_version_bot'
-fi
 git commit -a -m "Automatic version bump (release.sh)" || error_trap "Error issuing git commit"
 git tag ${new_version} || error_trap "Error issuing git tag"
 git push origin master || error_trap "Error issuing git push"
