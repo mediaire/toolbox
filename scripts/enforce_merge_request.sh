@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 TITLE_CHECK=false
 echo "$CI_MERGE_REQUEST_TITLE"
 case "$CI_MERGE_REQUEST_TITLE" in
