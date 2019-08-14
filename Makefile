@@ -3,7 +3,6 @@ MAKEFLAGS =+ -rR --warn-undefined-variables
 
 PROJECT = mediaire_toolbox
 IMAGE_BASE_NAME = $(PROJECT)
-IMAGE_BASE_NAME = mediaire_toolbox
 IMAGE_TAG_LATEST = latest
 IMAGE_TAG = $(shell git describe --tags --always --dirty)
 

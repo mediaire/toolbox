@@ -119,6 +119,23 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db.close()
 
+    def test_transaction_cancelled(self):
+        engine = self._get_temp_db(5)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+
+        # to be called when a transaction is skipped
+        t_db.set_cancelled(t_id, 'because it is cancelled')
+        t = t_db.get_transaction(t_id)
+
+        self.assertEqual(t.task_cancelled, 1)
+        self.assertTrue(t.end_date > t.start_date)
+        self.assertEqual(t.error, 'because it is cancelled')
+
+        t_db.close()
+
     def test_change_last_message(self):
         engine = self._get_temp_db(6)
         tr_1 = self._get_test_transaction()
