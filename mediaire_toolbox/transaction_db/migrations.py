@@ -11,5 +11,9 @@ MIGRATIONS = {
     ],
     3: [
         "ALTER TABLE transactions ADD COLUMN task_skipped INT DEFAULT 0",
+    ],
+    4: [
+        "ALTER TABLE transactions ADD COLUMN edited INT DEFAULT 0",
+        "ALTER TABLE transactions ADD COLUMN seen INT DEFAULT 0"
     ]
 }

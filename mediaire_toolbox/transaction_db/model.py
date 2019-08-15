@@ -28,6 +28,8 @@ class Transaction(Base):
     error = Column(String())
     task_progress = Column(Integer, default=0)
     task_skipped = Column(Integer, default=0)
+    edited = Column(Integer, default=0)
+    seen = Column(Integer, default=0)
 
     def to_dict(self):
         return { 'transaction_id': self.transaction_id,
@@ -45,7 +47,9 @@ class Transaction(Base):
                  'last_message': self.last_message,
                  'task_progress': self.task_progress,
                  'error': self.error,
-                 'task_skipped': self.task_skipped }
+                 'task_skipped': self.task_skipped,
+                 'edited': self.edited,
+                 'seen': self.seen }
 
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (

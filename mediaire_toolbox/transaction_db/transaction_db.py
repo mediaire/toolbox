@@ -138,7 +138,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def set_completed(self, id_: int, clear_error: bool = True):
+    def set_completed(self, id_: int, clear_error: bool=True):
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
         End_date automatically adjusted."""
@@ -152,8 +152,28 @@ class TransactionDB:
         except:
             self.session.rollback()
             raise
+        
+    def set_edited(self, id_: int):
+        """WIP: Must validate and later document, unit test, etc"""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.edited = 1
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
 
-    def set_skipped(self, id_: int, cause: str = None):
+    def set_seen(self, id_: int):
+        """WIP: Must validate and later document, unit test, etc"""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.seen = 1
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
+    
+    def set_skipped(self, id_: int, cause: str=None):
         """to be called when the transaction is skipped. Save skip information
         from 'cause'"""
         try:
