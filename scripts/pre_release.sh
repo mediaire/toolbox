@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # use deploy keys
 gitlab_hostname=$(echo "${CI_REPOSITORY_URL}" | sed -e 's|https\?://gitlab-ci-token:.*@||g' | sed -e 's|/.*||g')
 ssh-keyscan "${gitlab_hostname}" >> ~/.ssh/known_hosts
