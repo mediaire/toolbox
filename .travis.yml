@@ -4,5 +4,9 @@ services:
   - docker
 
 script:
-    - make build
-    - make test
+  - make build
+  - make test
+
+script:
+  - make build
+  - make safety

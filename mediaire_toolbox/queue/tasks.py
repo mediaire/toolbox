@@ -7,7 +7,7 @@ from copy import deepcopy
 class Task(object):
     """Defines task objects that can be handled by the task manager."""
 
-    def __init__(self, t_id=None, user_id=None, tag=None, input=None, output=None, data=None,
+    def __init__(self, t_id=None, user_id=None, tag=None, data=None,
                  timestamp=None, update_timestamp=None, error=None):
         """Initializes the Task object.
 
@@ -19,8 +19,6 @@ class Task(object):
             user_id who submitted this task, if applicable.
         tag: str
             String specifying the task. Unique for each task.
-        input: object
-        output: object
         data: dict
         timestamp: float
             Timestamp of task creation from`time.time()`
@@ -32,8 +30,6 @@ class Task(object):
         self.t_id = t_id
         self.user_id = user_id
         self.tag = tag
-        self.input = input
-        self.output = output
         self.timestamp = timestamp or int(time.time())
         self.update_timestamp = update_timestamp
         self.data = data
@@ -44,8 +40,6 @@ class Task(object):
         return {'tag': self.tag,
                 'timestamp': self.timestamp,
                 'update_timestamp': self.update_timestamp,
-                'input': self.input,
-                'output': self.output,
                 'data': self.data,
                 't_id': self.t_id,
                 'user_id': self.user_id,
@@ -53,23 +47,21 @@ class Task(object):
 
     def to_json(self):
         return json.dumps(self.to_dict())
-    
+
     def to_bytes(self):
         return self.to_json().encode('utf-8')
 
     def read_dict(self, d):
         tag = d['tag']
-        timestamp = d['timestamp']        
+        timestamp = d['timestamp']
         t_id = d.get('t_id', None)
         user_id = d.get('user_id', None)
         update_timestamp = d.get('update_timestamp', None)
-        input_ = d.get('input', None)
-        output = d.get('output', None)
         data = d.get('data', None)
         error = d.get('error', None)
-        self.__init__(t_id=t_id, user_id=user_id, tag=tag, input=input_,
-                      output=output, data=data, timestamp=timestamp,
-                      update_timestamp=update_timestamp, error=error)
+        self.__init__(t_id=t_id, user_id=user_id, tag=tag, data=data,
+                      timestamp=timestamp, update_timestamp=update_timestamp,
+                      error=error)
         return self
 
     def read_bytes(self, bytestring):
@@ -89,50 +81,20 @@ class Task(object):
             tag = self.tag + '__child'
         child_task = deepcopy(self)
         child_task.tag = tag
-        child_task.input = deepcopy(self.output)
         child_task.update_timestamp = int(time.time())
-        child_task.output = None
         return child_task
+
+    def get_subject_name(self):
+        """Get the subject name of the dicom_header"""
+        try:
+            t1_header = self.data['dicom_info']['t1']['header']
+            return t1_header['PatientName']
+        except ValueError:
+            return None
 
     def __str__(self):
         return str(self.to_dict())
 
     def __repr__(self):
-        return str(self.to_dict())
-
-
-class DicomTask(Task):
-    """Dicom specific task"""
-
-    def __init__(self, t_id=None, user_id=None, tag=None, input=None,
-                 output=None, dicom_info=None, data=None, timestamp=None,
-                 update_timestamp=None, error=None):
-        """Initializes the Task object.
-        Parameters
-        ----------
-        t_id: int
-            transaction id this task belongs to
-        user_id: int
-            user_id who submitted this task, if applicable.
-        tag: str
-            String specifying the task. Unique for each task.
-        input
-        output
-        data: dict
-        dicom_info: dict
-            {'t1': {'header': {...}, 'path': 'path/to/dicoms',
-             't2': {...}}
-        """
-        if dicom_info is not None:
-            if data is None:
-                data = {'dicom_info': dicom_info}
-            else:
-                data['dicom_info'] = dicom_info
-        super().__init__(t_id, user_id, tag, input, output, data,
-                         timestamp, update_timestamp, error)
-
-    def get_subject_name(self):
-        # the T1 header should always be there
-        t1_header = self.data['dicom_info']['t1']['header']
-        return t1_header['PatientName']
+        return self.__str__()
 

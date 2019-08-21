@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.14.0] - 2019-05-28
+* DEV-412 Add skipped state to TransactionDB
+* DEV-318 Task object refactor follow-up: delete input output field in tasks and delete DicomTask
+* DEV-384 Optimize data cleaner
+
+## [0.13.0] - 2019-04-18
+* Fix DataCleaner - do nothing if -1 for both space and time
+
+## [0.12.0] - 2019-04-10
+* Auto-release script
+* Bug in DataCleaner solved (folder size - int / str)
+
 ## [0.11.0] - 2019-01-21
 * Move AssessmentEdit model classes from webinterface to here
 * Provide universal way of logging in DEBUG mode

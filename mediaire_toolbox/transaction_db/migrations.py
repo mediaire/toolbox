@@ -10,5 +10,6 @@ MIGRATIONS = {
         "UPDATE transactions SET task_progress = 100 WHERE processing_state = 'send_to_pacs'"    
     ],
     3: [
+        "ALTER TABLE transactions ADD COLUMN task_skipped INT DEFAULT 0",
     ]
 }

@@ -25,12 +25,12 @@ class MockQueue(RedisWQ):
         super().__init__("", None)
         self.serialized_task = Task(t_id=1,
                                     tag='tag',
-                                    input={'t1': 'foo', 't2': 'bar'},
-                                    output={'out': 'foo'}).to_bytes()
+                                    data={'t1': 'foo', 't2': 'bar', 'out': 'foo'}).to_bytes()
         self.completed = False
         self.error_msg = None
 
-    def lease(self, lease_secs=5, block=True, timeout=None):
+    def lease(self, lease_secs=5, block=True, timeout=None,
+              limit=-1, timeunit='hour'):
         return self.serialized_task
 
     def error(self, value, msg=None):
@@ -38,7 +38,7 @@ class MockQueue(RedisWQ):
 
     def put(self, item):
         self.put_item = item
-     
+
     def complete(self, item):
         if item == self.serialized_task:
             self.completed = True
@@ -82,8 +82,8 @@ class TestDaemon(unittest.TestCase):
 
         self.transaction_failed = False
         self.foo_daemon.run_once()
-        
+
         self.assertFalse(self.input_queue.completed)
         self.assertFalse(self.input_queue.error_msg)
-        self.assertTrue(self.result_queue.put_item and 
+        self.assertTrue(self.result_queue.put_item and
                         Task().read_bytes(self.result_queue.put_item).error)

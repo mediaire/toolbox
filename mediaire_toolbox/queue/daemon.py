@@ -26,7 +26,7 @@ class QueueDaemon(ABC):
         """
         Parameters
         ----------
-        
+
         input_queue:
             A Redis queue instance from which we will consume Tasks
         result_queue:
@@ -57,12 +57,16 @@ class QueueDaemon(ABC):
     def run_once(self):
         logger.info('Waiting for items from queue {}'.format(
             self.input_queue._main_q_key))
+
+        limit = self.config.get('lease_limit', -1)
+        limit_timeunit = self.config.get('limit_timeunit', 'hour')
         item = self.input_queue.lease(
-            lease_secs=self.lease_secs, block=True)
+            lease_secs=self.lease_secs, block=True,
+            limit=limit, timeunit=limit_timeunit)
         try:
             # TODO Make this class a parameter for better generalization
             # how to do reflection in python?
-            task = tasks.DicomTask().read_bytes(item)
+            task = tasks.Task().read_bytes(item)
         except Exception as e:
             logger.exception(
                 "Operating error or error deserializing task object")
