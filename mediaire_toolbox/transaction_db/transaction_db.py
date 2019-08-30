@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from mediaire_toolbox.constants import TRANSACTIONS_DB_SCHEMA_NAME, \
                                        TRANSACTIONS_DB_SCHEMA_VERSION
@@ -46,8 +46,7 @@ class TransactionDB:
         ----------
         engine: SQLAlchemy engine
         """
-        DBSession = sessionmaker(bind=engine)
-        self.session = DBSession()
+        self.session = scoped_session(sessionmaker(bind=engine))
         create_all(engine)
         db_version = self.session.query(SchemaVersion).get(TRANSACTIONS_DB_SCHEMA_NAME)
         if not db_version:
