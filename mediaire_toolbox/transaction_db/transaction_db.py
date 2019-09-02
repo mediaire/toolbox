@@ -166,6 +166,20 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    def set_cancelled(self, id_: int, cause: str = None):
+        """to be called when the transaction is cancelled. Save cancel information
+        from 'cause'"""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.task_cancelled = 1
+            t.end_date = datetime.datetime.utcnow()
+            if cause:
+                t.error = cause
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
+
     def set_last_message(self, id_: int, last_message: str):
         """Updates the last_message field of the transaction
         with the given string."""

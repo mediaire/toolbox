@@ -8,3 +8,5 @@ Shared toolbox for our pipelines.
 
 [![Build Status](https://travis-ci.org/mediaire/mediaire_toolbox.svg?branch=master)](https://travis-ci.org/mediaire/mediaire_toolbox)
 
+Migration:
+add an entry in migrate.py, and then change the version number in constants.py
