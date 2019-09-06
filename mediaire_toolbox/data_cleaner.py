@@ -8,16 +8,30 @@ from mediaire_toolbox.logging.base_logging_conf import basic_logging_conf
 
 default_logger = logging.getLogger(__name__)
 
-"""
-Utility class for monitoring the disk usage in a folder and automatically
-cleaning up sub folders in case of need. Older sub folders would be cleaned up
-first.
-You can also configure a number of seconds as age for sub folders, after which
-time it will be cleaned up.
-"""
-
 
 class DataCleaner:
+    """
+    Utility class for monitoring the disk usage in a folder and automatically
+    cleaning up files in case of need. Older files would be cleaned up
+    first.
+    You can also configure a number of seconds as age for files, after which
+    time it will be cleaned up.
+
+    There are several rules:
+    1. Older files are checked first.
+    2. For the size restriction, as long as time restriction
+    is met, stop checking.
+    3. whitelists/blacklists:
+        a.) Files that match Whitelist patterns shall not be deleted, even if conditions
+        not met
+        b.) Files that do not match the Blacklist patterns shall not be deleted, even if
+        conditions not met
+    4. priority_lists function the same as the corresponding filter list.
+    If the filterlist is a whitelist, then the priority list works as a whitelist
+    extension.
+    5. The priority of the prioritylist is ascending: for a whitelist, if requirements
+    not met, the first in the priority list are deleted-then the second ...
+    """
 
     def __init__(self, folder, max_folder_size, max_data_seconds,
                  whitelist=None, blacklist=None, priority_list=None):
@@ -66,11 +80,13 @@ class DataCleaner:
 
     @staticmethod
     def _check_filterlist_valid(whitelist, blacklist):
+        """Check if the filterlist is valid"""
         if whitelist and blacklist:
             raise ValueError("Both whitelist and blacklist in args")
 
     @staticmethod
     def scan_dir(path):
+        """Scans the directory and subfolders for all files"""
         entries = []
         for entry in os.scandir(path):
             if entry.is_dir():
@@ -81,19 +97,24 @@ class DataCleaner:
 
     @staticmethod
     def _creation_time_and_size(file):
+        """Returns a (filename, creation_time, filesize) tuple"""
         stat = os.stat(file)
         return file, stat.st_ctime, stat.st_size
 
     @staticmethod
     def _get_file_stats(filelist):
+        """Transforms a list of filenames to a list of
+        (filename, creation_time, filesize) tuples"""
         return [DataCleaner._creation_time_and_size(f) for f in filelist]
 
     @staticmethod
     def _sort_filestat_list_by_time(filestat_list):
+        """Sort the filestats by time, ascending"""
         return sorted(filestat_list, key=lambda x: x[1])
 
     @staticmethod
     def _sum_filestat_list(filestat_list):
+        """Get the total file size of a list of filestats"""
         return sum([size for _, _, size in filestat_list])
 
     @staticmethod
@@ -102,6 +123,7 @@ class DataCleaner:
 
     @staticmethod
     def _fnmatch(file, pattern_list):
+        """Returns true if the filename matches with a list of patterns"""
         for pattern in pattern_list:
             if fnmatch.fnmatch(file, pattern):
                 return True
@@ -109,12 +131,13 @@ class DataCleaner:
 
     @staticmethod
     def _check_remove_time(c_time, max_data_seconds):
+        """Returns true the file should be removed because it is too old"""
         age = DataCleaner._get_current_time() - c_time
         return max_data_seconds < age
 
     @staticmethod
     def _check_remove_filter(file, whitelist, blacklist):
-        """return true if file can be removed"""
+        """Return true if file can be removed"""
         DataCleaner._check_filterlist_valid(whitelist, blacklist)
         if whitelist:
             return not DataCleaner._fnmatch(file, whitelist)
@@ -125,6 +148,7 @@ class DataCleaner:
 
     @staticmethod
     def _remove_from_file_list(filelist, removed_index_list):
+        """Inplace Remove the indexes of a list given the list of indexes."""
         shift_counter = 0
         for i in removed_index_list:
             del filelist[i-shift_counter]
@@ -132,6 +156,7 @@ class DataCleaner:
 
     @staticmethod
     def _merge_lists(input_list):
+        """Squash a list of lists to one list"""
         results = []
         for l in input_list:
             results += [l]
@@ -151,6 +176,7 @@ class DataCleaner:
 
     @staticmethod
     def clean_files_by_date(filelist, max_data_seconds, whitelist, blacklist):
+        """Clean the files by date"""
         removed = []
         removed_index_list = []
         for i in range(len(filelist)):
@@ -166,6 +192,15 @@ class DataCleaner:
     @staticmethod
     def clean_files_by_size(filelist, reduce_size,
                             whitelist=None, blacklist=None):
+        """Clean the files by size
+
+        Parameters
+        ----------
+        filelist: list
+            list of remove candidates, sorted by time
+        reduce_size: int
+            file size that needs to be removed to fulfill quota
+        """
         removed = []
         remove_size_counter = 0
         removed_index_list = []
@@ -203,6 +238,8 @@ class DataCleaner:
 
     @staticmethod
     def remove_empty_folder_from_base_folder(base_folder):
+        """Parent function of remove_empty_folders so that the base folder
+        is not deleted"""
         removed = []
         scan_dirs = [entry for entry in os.scandir(base_folder) if entry.is_dir()]
         for entry in scan_dirs:
