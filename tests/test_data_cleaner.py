@@ -102,7 +102,11 @@ class TestDataCleaner(unittest.TestCase):
         self.assertEqual([], DataCleaner._merge_lists([]))
 
     def test__merge_lists_2(self):
-        self.assertEqual([0, 1], DataCleaner._merge_lists([[0], [1]]))
+        self.assertEqual([0, 1], DataCleaner._merge_lists([[0, 1]]))
+
+    def test__merge_lists_3(self):
+        self.assertEqual(
+            ['*.nii', '*.dcm'], DataCleaner._merge_lists(['*.nii', '*.dcm']))
 
     """Test public functions"""
 

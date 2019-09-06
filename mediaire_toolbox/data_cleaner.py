@@ -134,7 +134,7 @@ class DataCleaner:
     def _merge_lists(input_list):
         results = []
         for l in input_list:
-            results += l
+            results += [l]
         return results
 
     @staticmethod
