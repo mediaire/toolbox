@@ -249,6 +249,11 @@ class DataCleaner:
         return remove_list
 
 
+def read_path(path):
+    with open(path) as f:
+        return [l.split()[0] for l in f.readlines()]
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='clean folder')
@@ -262,6 +267,8 @@ def main():
                         help='whitelist pathname')
     parser.add_argument('--blacklist', type=str, nargs='?',
                         help='blacklist pathname')
+    parser.add_argument('--prioritylist', type=str, nargs='?',
+                        help='prioritylist pathname')
     parser.add_argument('--dry_run', action="store_true", default=False)
 
     args = parser.parse_args()
@@ -271,16 +278,19 @@ def main():
 
     filter_path = args.blacklist or args.whitelist
     if filter_path:
-        with open(filter_path) as f:
-            filter_list = [l.split()[0] for l in f.readlines()]
-
+        filter_list = read_path(filter_path)
+    priority_path = args.prioritylist
+    if priority_path:
+        priority_list = read_path(priority_path)
     data_cleaner = DataCleaner(args.folder,
                                args.max_folder_size,
                                args.max_data_seconds,
                                whitelist=(filter_list
                                           if args.whitelist else None),
                                blacklist=(filter_list
-                                          if args.blacklist else None))
+                                          if args.blacklist else None),
+                               priority_list=(priority_list
+                                              if args.priority_path else None))
     data_cleaner.clean_up(dry_run=dry_run)
 
 
