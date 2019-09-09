@@ -53,7 +53,7 @@ class DataCleaner:
         blacklist: list
             Blacklist for files. List of Unix like filename pattern strings.
         priority_list: list
-            Priority black list.
+            Priority list.
             List of list of files to keep/delete, importance from low to high.
             i.e if the priority_list = [[list_A], [list_B], [list_C]], and
             whitelist is used, then first the files outside the
