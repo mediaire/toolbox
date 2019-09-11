@@ -79,14 +79,6 @@ class Task(object):
         child_task.update_timestamp = int(time.time())
         return child_task
 
-    def get_subject_name(self):
-        """Get the subject name of the dicom_header"""
-        try:
-            t1_header = self.data['dicom_info']['t1']['header']
-            return t1_header['PatientName']
-        except ValueError:
-            return None
-
 
     def __str__(self):
         return str(self.to_dict())
