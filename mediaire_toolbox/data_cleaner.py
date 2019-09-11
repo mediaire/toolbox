@@ -204,6 +204,7 @@ class DataCleaner:
         removed = []
         remove_size_counter = 0
         removed_index_list = []
+        # do not clean if size requirements met
         if reduce_size < 0:
             return removed
         for i in range(len(filelist)):
@@ -219,7 +220,8 @@ class DataCleaner:
 
     @staticmethod
     def remove_files(remove_list):
-        for file in remove_list:
+        """Remove the files from disk in the remove_list"""
+        for file, _, _ in remove_list:
             os.remove(file)
 
     @staticmethod
@@ -250,6 +252,20 @@ class DataCleaner:
 
     def clean_up(self, dry_run=False,
                  whitelist=None, blacklist=None):
+        """Clean up. The arguements whitelist and blacklist are for
+        folders that should not/should be deleted on runtime, i.e folders that
+        are being currently processed.
+
+        Paremeters
+        ----------
+        dry_run: bool
+            True if only returning the files to be deleted and not deleting them
+
+        Return
+        ------
+        remove_list: list
+            list of files to be removed
+        """
         whitelist = whitelist + self.whitelist if whitelist else self.whitelist
         blacklist = blacklist + self.blacklist if blacklist else self.blacklist
         DataCleaner._check_filterlist_valid(whitelist, blacklist)
@@ -265,13 +281,30 @@ class DataCleaner:
         if self.max_folder_size_bytes > 0:
             current_size = self._sum_filestat_list(filelist)
             reduce_size = current_size - self.max_folder_size_bytes
+            # NOTE if no blacklist or whitelist, prioritylist will act as whitelist
+            # iter through the lists of priority_list
+
+            # the priority_list is sorted by the priority, with the priority
+            # ascending. Thus
+
+            # if a priority_list is [[1], [2,3], [4]], and a whitelist is enabled
+            # then add [1,2,3,4], [2,3,4] and [4] to each loop of the whitelist
+            # Then files matching [1,2,3,4] are kept first,
+            # and then files matching [2,3,4] etc
+
+            # if a priority_list is [[1], [2,3], [4]], and a blacklist is enabled
+            # then add [4], [2,3,4] and [1,2,3,4] to each loop of the blacklist
+            # Then files matching [4] are deleted first, and then files matching
+            # [2,3,4] etc
             for i in range(len(self.priority_list) + 1):
                 if blacklist:
+                    # get the blacklist with the priority_list added
                     priority_black_list = (
                         blacklist + self._merge_lists(self.priority_list[::-1][:i]))
                     removed = self.clean_files_by_size(
                         filelist, reduce_size, blacklist=priority_black_list)
                 else:
+                    # get the whitelist with the priority_list added
                     priority_white_list = (
                         whitelist + self._merge_lists(self.priority_list[i:]))
                     removed = self.clean_files_by_size(
