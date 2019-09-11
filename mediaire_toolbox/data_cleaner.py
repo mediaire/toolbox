@@ -159,7 +159,7 @@ class DataCleaner:
         """Squash a list of lists to one list"""
         results = []
         for l in input_list:
-            results += [l]
+            results += l
         return results
 
     @staticmethod
