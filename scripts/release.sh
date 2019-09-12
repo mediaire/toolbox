@@ -117,7 +117,8 @@ END
 # Perform final operations
 #
 echo "Bumping and tagging new version in Git..."
-git commit -a -m "Automatic version bump (release.sh)" || error_trap "Error issuing git commit"
+git add **/__init__.py CHANGELOG.md || error_trap "Error issuing git add"
+git commit -m "Automatic version bump (release.sh)" || error_trap "Error issuing git commit"
 git tag ${new_version} || error_trap "Error issuing git tag"
 git push origin master || error_trap "Error issuing git push"
 git push --tags || error_trap "Error issuing git push --tags"
