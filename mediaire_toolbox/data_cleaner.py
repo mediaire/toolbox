@@ -57,7 +57,7 @@ class DataCleaner:
             Blacklist for files. List of Unix like filename pattern strings.
         priority_list: list
             Priority list.
-            List of list of files to keep/delete, importance from low to high.
+            List of files to keep/delete, importance from low to high.
             i.e if the priority_list = [[list_A], [list_B], [list_C]], and
             whitelist is used, then first the files outside the
             concatenation of the lists are deleted;
@@ -161,17 +161,6 @@ class DataCleaner:
         for i in removed_index_list:
             del filelist[i-shift_counter]
             shift_counter += 1
-
-    @staticmethod
-    def _merge_lists(input_list):
-        """Squash a list of lists to one list"""
-        results = []
-        for l in input_list:
-            if not isinstance(l, list):
-                raise ValueError(
-                    'The input for _merge_lists should be a list of lists')
-            results += l
-        return results
 
     @staticmethod
     def _log_debug_removed(removed):
@@ -347,13 +336,13 @@ class DataCleaner:
                 if blacklist:
                     # get the blacklist with the priority_list added
                     priority_black_list = (
-                        blacklist + self._merge_lists(self.priority_list[::-1][:i]))
+                        blacklist + self.priority_list[::-1][:i])
                     removed = self.clean_files_by_size(
                         filelist, reduce_size, blacklist=priority_black_list)
                 else:
                     # get the whitelist with the priority_list added
                     priority_white_list = (
-                        whitelist + self._merge_lists(self.priority_list[i:]))
+                        whitelist + self.priority_list[i:])
                     removed = self.clean_files_by_size(
                         filelist, reduce_size, whitelist=priority_white_list)
                 reduce_size -= self._sum_filestat_list(removed)

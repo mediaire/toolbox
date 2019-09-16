@@ -104,22 +104,6 @@ class TestDataCleaner(unittest.TestCase):
         self.assertTrue(DataCleaner._check_remove_filter(
             'test.nii', None, None))
 
-    def test__merge_lists_1(self):
-        self.assertEqual([], DataCleaner._merge_lists([]))
-
-    def test__merge_lists_2(self):
-        self.assertEqual([0, 1], DataCleaner._merge_lists([[0], [1]]))
-
-    def test__merge_lists_3(self):
-        self.assertEqual(
-            ['*.nii', '*.dcm'],
-            DataCleaner._merge_lists([['*.nii'], ['*.dcm']]))
-
-    def test__merge_lists_raise(self):
-        self.assertRaises(
-            ValueError,
-            DataCleaner._merge_lists, [1, 2])
-
     """Test public functions"""
 
     def test_clean_files_by_date_1(self):
@@ -264,7 +248,7 @@ class TestDataCleaner(unittest.TestCase):
                 ('file4', 13, 30)
             ]
             mock_time.return_value = 20
-            mock_priority = [['file1'], ['file3']]
+            mock_priority = ['file1', 'file3']
             dc_instance = DataCleaner(
                 folder='',
                 max_folder_size=1.0*50/1024/1028,
