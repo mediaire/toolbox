@@ -20,17 +20,20 @@ class DataCleaner:
     There are several rules:
     1. Older files are checked first.
     2. For the size restriction, as long as time restriction
-    is met, stop checking.
+        is met, stop checking.
     3. whitelists/blacklists:
-        a.) Files that match Whitelist patterns shall not be deleted, even if conditions
-        not met
-        b.) Files that do not match the Blacklist patterns shall not be deleted, even if
+        a.) Files that match Whitelist patterns shall not be deleted, even if
         conditions not met
+        b.) Files that do not match the Blacklist patterns shall not
+        be deleted, even if conditions not met
     4. priority_lists function the same as the corresponding filter list.
-    If the filterlist is a whitelist, then the priority list works as a whitelist
-    extension.
-    5. The priority of the prioritylist is ascending: for a whitelist, if requirements
-    not met, the first in the priority list are deleted-then the second ...
+        If the filterlist is a whitelist, then the priority list works
+        as a whitelist extension.
+    5. The priority of the priority_list is ascending:
+        For a whitelist, if requirements not met, the items in the first
+        list in the priority list are deleted, then the second ...
+        For a blacklist, if requirements not met, the items in the last
+        list in the priority list are deleted, then the second to last...
     """
 
     def __init__(self, folder, max_folder_size, max_data_seconds,
@@ -59,10 +62,10 @@ class DataCleaner:
             whitelist is used, then first the files outside the
             concatenation of the lists are deleted;
             if the data folder is still too large then files in list_A are
-            deleted. Similarly, then the files in list_B and then at last files in
-            list_C.
-            NOTE: If whitelist and blacklist are both not given, the priority list
-            will act like a whitelist
+            deleted. Similarly, then the files in list_B and then at last
+            files in list_C.
+            NOTE: If whitelist and blacklist are both not given, the priority
+            list will act like a whitelist
         """
         self.base_folder = folder
         self.max_folder_size = max_folder_size
@@ -80,15 +83,18 @@ class DataCleaner:
 
     @staticmethod
     def _check_filterlist_valid(whitelist, blacklist):
-        """Check if the filterlist is valid"""
+        """Check if the filterlist is valid, raise error if
+        whitelist and blacklist exist at the same time"""
         if whitelist and blacklist:
             raise ValueError("Both whitelist and blacklist in args")
 
     @staticmethod
     def scan_dir(path):
-        """Scans the directory and subfolders for all files"""
+        """Scans the directory and its subfolders for all files,
+        and return a list of filepaths"""
         entries = []
         for entry in os.scandir(path):
+            # recursion when entry is a subfolder
             if entry.is_dir():
                 entries += DataCleaner.scan_dir(os.path.join(path, entry.name))
             else:
@@ -109,7 +115,8 @@ class DataCleaner:
 
     @staticmethod
     def _sort_filestat_list_by_time(filestat_list):
-        """Sort the filestats by time, ascending"""
+        """Sort the (filename, creation_time, filesize) list
+        by time, ascending"""
         return sorted(filestat_list, key=lambda x: x[1])
 
     @staticmethod
@@ -137,18 +144,19 @@ class DataCleaner:
 
     @staticmethod
     def _check_remove_filter(file, whitelist, blacklist):
-        """Return true if file can be removed"""
+        """Return true if file should be removed based on matched filename"""
         DataCleaner._check_filterlist_valid(whitelist, blacklist)
         if whitelist:
             return not DataCleaner._fnmatch(file, whitelist)
         if blacklist:
             return DataCleaner._fnmatch(file, blacklist)
-        # no blacklist and whitelist, just ignore
+        # no blacklist and whitelist, assume it can be removed
         return True
 
     @staticmethod
     def _remove_from_file_list(filelist, removed_index_list):
-        """Inplace Remove the indexes of a list given the list of indexes."""
+        """Remove the indexes of a inplace list given the
+        list of indexes. NOTE function with side-effects"""
         shift_counter = 0
         for i in removed_index_list:
             del filelist[i-shift_counter]
@@ -159,11 +167,15 @@ class DataCleaner:
         """Squash a list of lists to one list"""
         results = []
         for l in input_list:
+            if not isinstance(l, list):
+                raise ValueError(
+                    'The input for _merge_lists should be a list of lists')
             results += l
         return results
 
     @staticmethod
     def _log_debug_removed(removed):
+        """Show the files that are about to be removed"""
         default_logger.info("Removing files:")
         for file in removed:
             default_logger.info(
@@ -175,13 +187,27 @@ class DataCleaner:
                     DataCleaner._sum_filestat_list(removed)/1024/1024))
 
     @staticmethod
-    def clean_files_by_date(filelist, max_data_seconds, whitelist, blacklist):
-        """Clean the files by date"""
+    def clean_files_by_date(filelist, max_data_seconds,
+                            whitelist=None, blacklist=None):
+        """Clean files that are older than max_data_seconds.
+
+        Parameters
+        ----------
+        filelist: list
+            list of remove candidates, sorted by time.
+        max_data_seconds: int
+            maximum allowed age for files.
+
+        Returns
+        -------
+        list
+            List of tuples. List of filestats the are to be removed"""
         removed = []
         removed_index_list = []
         for i in range(len(filelist)):
             file, creation_time, _ = filelist[i]
-            if (DataCleaner._check_remove_filter(file, whitelist, blacklist) and
+            if (DataCleaner._check_remove_filter(
+                    file, whitelist, blacklist) and
                     DataCleaner._check_remove_time(
                     creation_time, max_data_seconds)):
                 removed.append(filelist[i])
@@ -192,7 +218,7 @@ class DataCleaner:
     @staticmethod
     def clean_files_by_size(filelist, reduce_size,
                             whitelist=None, blacklist=None):
-        """Clean the files by size
+        """Clean the files by size.
 
         Parameters
         ----------
@@ -200,6 +226,11 @@ class DataCleaner:
             list of remove candidates, sorted by time
         reduce_size: int
             file size that needs to be removed to fulfill quota
+
+        Returns
+        -------
+        list
+            List of tuples. List of filestats the are to be removed
         """
         removed = []
         remove_size_counter = 0
@@ -220,9 +251,25 @@ class DataCleaner:
 
     @staticmethod
     def remove_files(remove_list):
-        """Remove the files from disk in the remove_list"""
+        """Trie to remove the files from disk in the remove_list
+
+        Returns
+        -------
+        list
+            returns a list of to-be-removed files that failed.
+        """
+        fail_list = []
         for file, _, _ in remove_list:
-            os.remove(file)
+            try:
+                os.remove(file)
+            except FileNotFoundError:
+                fail_list.append(file)
+            except Exception as e:
+                default_logger.warn(
+                    'Failed to remove file {}, with {}'
+                    .format(file, str(e)))
+                fail_list.append(file)
+        return fail_list
 
     @staticmethod
     def remove_empty_folders(folder):

@@ -84,7 +84,8 @@ class TestDataCleaner(unittest.TestCase):
         self.assertFalse(DataCleaner._fnmatch('test.nii', ['*.dcm']))
 
     def test__check_remove_filter(self):
-        self.assertTrue(DataCleaner._check_remove_filter('test.nii', [], []))
+        self.assertTrue(DataCleaner._check_remove_filter(
+            'test.nii', [], []))
 
     def test__check_remove_filter2(self):
         self.assertFalse(
@@ -99,6 +100,10 @@ class TestDataCleaner(unittest.TestCase):
             ValueError, DataCleaner._check_remove_filter,
             '', ['*.nii'], ['*.nii'])
 
+    def test__check_remove_filter5(self):
+        self.assertTrue(DataCleaner._check_remove_filter(
+            'test.nii', None, None))
+
     def test__merge_lists_1(self):
         self.assertEqual([], DataCleaner._merge_lists([]))
 
@@ -109,6 +114,11 @@ class TestDataCleaner(unittest.TestCase):
         self.assertEqual(
             ['*.nii', '*.dcm'],
             DataCleaner._merge_lists([['*.nii'], ['*.dcm']]))
+
+    def test__merge_lists_raise(self):
+        self.assertRaises(
+            ValueError,
+            DataCleaner._merge_lists, [1, 2])
 
     """Test public functions"""
 
@@ -217,6 +227,11 @@ class TestDataCleaner(unittest.TestCase):
         removed = DataCleaner.clean_files_by_size(filelist, 15, ['file1'], [])
         self.assertEqual([('file2', 0, 10), ('file3', 0, 10)], removed)
         self.assertEqual([('file1', 0, 10), ('file4', 0, 10)], filelist)
+
+    def test_remove_files_file_nonexistent(self):
+        fail_list = DataCleaner.remove_files(
+            [('mockpath/that/does/not/exist', 0, 0)])
+        self.assertEqual(['mockpath/that/does/not/exist'], fail_list)
 
     def test_remove_empty_folder_from_base_folder_1(self):
         try:
