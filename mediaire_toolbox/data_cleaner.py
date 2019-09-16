@@ -26,14 +26,9 @@ class DataCleaner:
         conditions not met
         b.) Files that do not match the Blacklist patterns shall not
         be deleted, even if conditions not met
-    4. priority_lists function the same as the corresponding filter list.
-        If the filterlist is a whitelist, then the priority list works
-        as a whitelist extension.
-    5. The priority of the priority_list is ascending:
-        For a whitelist, if requirements not met, the items in the first
+    4. The priority of the priority_list is ascending:
+        If requirements not met, the items in the first
         list in the priority list are deleted, then the second ...
-        For a blacklist, if requirements not met, the items in the last
-        list in the priority list are deleted, then the second to last...
     """
 
     def __init__(self, folder, max_folder_size, max_data_seconds,
@@ -57,15 +52,13 @@ class DataCleaner:
             Blacklist for files. List of Unix like filename pattern strings.
         priority_list: list
             Priority list.
-            List of files to keep/delete, importance from low to high.
-            i.e if the priority_list = [[list_A], [list_B], [list_C]], and
-            whitelist is used, then first the files outside the
-            concatenation of the lists are deleted;
-            if the data folder is still too large then files in list_A are
-            deleted. Similarly, then the files in list_B and then at last
-            files in list_C.
-            NOTE: If whitelist and blacklist are both not given, the priority
-            list will act like a whitelist
+            List of files to delete, starting from the start to end.
+            i.e if the priority_list = [pattern_A, pattern_B, pattern_C], and
+            Then first the files outside the whitelist and priority_list
+            lists are deleted;
+            if the data folder is still too large then files that match pattern_A are
+            deleted. then the files matching pattern_B and then at last
+            files matching pattern_C.
         """
         self.base_folder = folder
         self.max_folder_size = max_folder_size
@@ -317,34 +310,20 @@ class DataCleaner:
         if self.max_folder_size_bytes > 0:
             current_size = self._sum_filestat_list(filelist)
             reduce_size = current_size - self.max_folder_size_bytes
-            # NOTE if no blacklist or whitelist, prioritylist will act as whitelist
-            # iter through the lists of priority_list
-
-            # the priority_list is sorted by the priority, with the priority
-            # ascending. Thus
-
-            # if a priority_list is [[1], [2,3], [4]], and a whitelist is enabled
-            # then add [1,2,3,4], [2,3,4] and [4] to each loop of the whitelist
-            # Then files matching [1,2,3,4] are kept first,
-            # and then files matching [2,3,4] etc
-
-            # if a priority_list is [[1], [2,3], [4]], and a blacklist is enabled
-            # then add [4], [2,3,4] and [1,2,3,4] to each loop of the blacklist
-            # Then files matching [4] are deleted first, and then files matching
-            # [2,3,4] etc
-            for i in range(len(self.priority_list) + 1):
-                if blacklist:
-                    # get the blacklist with the priority_list added
-                    priority_black_list = (
-                        blacklist + self.priority_list[::-1][:i])
-                    removed = self.clean_files_by_size(
-                        filelist, reduce_size, blacklist=priority_black_list)
-                else:
-                    # get the whitelist with the priority_list added
-                    priority_white_list = (
-                        whitelist + self.priority_list[i:])
-                    removed = self.clean_files_by_size(
-                        filelist, reduce_size, whitelist=priority_white_list)
+            # first delete based on whitelist/blacklist
+            if blacklist:
+                removed = self.clean_files_by_size(
+                    filelist, reduce_size, blacklist=blacklist)
+            else:
+                removed = self.clean_files_by_size(
+                    filelist, reduce_size,
+                    whitelist=whitelist + self.priority_list)
+            reduce_size -= self._sum_filestat_list(removed)
+            remove_list += removed
+            # remove files based on priority list
+            for pattern in self.priority_list:
+                removed = self.clean_files_by_size(
+                    filelist, reduce_size, blacklist=[pattern])
                 reduce_size -= self._sum_filestat_list(removed)
                 remove_list += removed
         if dry_run:
