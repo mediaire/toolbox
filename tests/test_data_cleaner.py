@@ -12,6 +12,14 @@ logging.basicConfig(format='%(asctime)s %(levelname)s  %(module)s:%(lineno)s '
 
 class TestDataCleaner(unittest.TestCase):
     """Test protected member functions"""
+    def test_check_valid_init_raise(self):
+        self.assertRaises(ValueError, DataCleaner, None, 0, 0)
+
+    def test_check_valid_init(self):
+        DataCleaner(
+            None, 0, 0,
+            None, ['*.nii'], ['test.nii'])
+
     def test__creation_time_and_size(self):
         class mock_class():
             def __init__(self, time, size):
@@ -84,25 +92,25 @@ class TestDataCleaner(unittest.TestCase):
         self.assertFalse(DataCleaner._fnmatch('test.nii', ['*.dcm']))
 
     def test__check_remove_filter(self):
-        self.assertTrue(DataCleaner._check_remove_filter(
+        self.assertFalse(DataCleaner._check_remove_filter(
             'test.nii', [], []))
 
     def test__check_remove_filter2(self):
         self.assertFalse(
-            DataCleaner._check_remove_filter('test.nii', ['*.nii'], []))
+            DataCleaner._check_remove_filter('test.nii', ['*.dcm'], []))
 
     def test__check_remove_filter3(self):
         self.assertTrue(
             DataCleaner._check_remove_filter('test.nii', [], ['*.nii']))
 
-    def test__check_remove_filter4(self):
-        self.assertRaises(
-            ValueError, DataCleaner._check_remove_filter,
-            '', ['*.nii'], ['*.nii'])
-
     def test__check_remove_filter5(self):
-        self.assertTrue(DataCleaner._check_remove_filter(
+        self.assertFalse(DataCleaner._check_remove_filter(
             'test.nii', None, None))
+
+    def test__check_remove_filter6(self):
+        """Both whitelist and blacklist"""
+        self.assertFalse(DataCleaner._check_remove_filter(
+            'test.nii', ['test.nii'], ['*.nii']))
 
     """Test public functions"""
 
@@ -122,7 +130,7 @@ class TestDataCleaner(unittest.TestCase):
             self.assertEqual(
                 [('file1', 0, 0),
                  ('file2', 3, 0)],
-                DataCleaner.clean_files_by_date(filelist, 6, [], [])
+                DataCleaner.clean_files_by_date(filelist, 6, [], ['*file*'])
             )
             self.assertEqual(
                 [('file3', 5, 0),
@@ -163,7 +171,7 @@ class TestDataCleaner(unittest.TestCase):
 
             self.assertEqual(
                 [('file2', 3, 0)],
-                DataCleaner.clean_files_by_date(filelist, 6, ['file1'], [])
+                DataCleaner.clean_files_by_date(filelist, 6, ['file1'], ['*file*'])
             )
             self.assertEqual(
                 [('file1', 0, 0),
@@ -182,7 +190,7 @@ class TestDataCleaner(unittest.TestCase):
             ('file3', 0, 10),
             ('file4', 0, 10)
         ]
-        removed = DataCleaner.clean_files_by_size(filelist, 15, [], [])
+        removed = DataCleaner.clean_files_by_size(filelist, 15, [], ['file*'])
         self.assertEqual([('file1', 0, 10), ('file2', 0, 10)], removed)
         self.assertEqual([('file3', 0, 10), ('file4', 0, 10)], filelist)
 
@@ -208,7 +216,8 @@ class TestDataCleaner(unittest.TestCase):
             ('file3', 0, 10),
             ('file4', 0, 10)
         ]
-        removed = DataCleaner.clean_files_by_size(filelist, 15, ['file1'], [])
+        removed = DataCleaner.clean_files_by_size(
+            filelist, 15, ['file1'], ['file*'])
         self.assertEqual([('file2', 0, 10), ('file3', 0, 10)], removed)
         self.assertEqual([('file1', 0, 10), ('file4', 0, 10)], filelist)
 
@@ -237,7 +246,7 @@ class TestDataCleaner(unittest.TestCase):
         finally:
             shutil.rmtree(base_folder)
 
-    def test_clean_up_priority_whitelist(self):
+    def test_clean_up_priority_list(self):
         with mock.patch.object(DataCleaner, 'scan_dir'), \
                 mock.patch.object(DataCleaner, '_get_file_stats') as mock_files, \
                 mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
@@ -248,17 +257,17 @@ class TestDataCleaner(unittest.TestCase):
                 ('file4', 13, 30)
             ]
             mock_time.return_value = 20
-            mock_priority = ['file1', 'file3']
+            mock_priority = ['file2', 'file4', 'file*']
             dc_instance = DataCleaner(
                 folder='',
                 max_folder_size=1.0*50/1024/1028,
                 max_data_seconds=10,
+                whitelist=['file1', 'file3'],
                 priority_list=mock_priority
             )
             removed = dc_instance.clean_up(dry_run=True)
             self.assertEqual(
                 [('file2', 5, 10),
-                 ('file4', 13, 30),
-                 ('file1', 15, 30)],
+                 ('file4', 13, 30)],
                 removed
             )
