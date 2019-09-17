@@ -26,6 +26,12 @@ class Transaction(Base):
     processing_state = Column(String(255))
     last_message = Column(String)
     error = Column(String())
+    # new platform status: unseen / reviewed / sent_to_pacs 
+    status = Column(String())
+    # indexed from DICOM header, for free text search
+    institution = Column(String())
+    # indexed from Task object, for free text search
+    sequences = Column(String())
     task_progress = Column(Integer, default=0)
     task_skipped = Column(Integer, default=0)
     task_cancelled = Column(Integer, default=0)
@@ -47,7 +53,10 @@ class Transaction(Base):
                  'task_progress': self.task_progress,
                  'error': self.error,
                  'task_skipped': self.task_skipped,
-                 'task_cancelled': self.task_cancelled}
+                 'task_cancelled': self.task_cancelled,
+                 'status': self.status,
+                 'institution': self.institution,
+                 'sequences': self.sequences }
 
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (
