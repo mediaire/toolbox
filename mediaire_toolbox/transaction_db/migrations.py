@@ -20,7 +20,7 @@ MIGRATIONS = {
         "ALTER TABLE transactions ADD COLUMN institution TEXT",
         "ALTER TABLE transactions ADD COLUMN sequences TEXT",
         "UPDATE transactions SET status = 'sent_to_pacs' WHERE processing_state = 'send_to_pacs'",
-        "UPDATE transactions SET status = 'reviewed' WHERE processing_state != 'send_to_pacs'"
+        "UPDATE transactions SET status = 'unseen' WHERE processing_state != 'send_to_pacs'"
         # institution & sequences to be filled out by 2.0.0 programmatic migration
     ]
 }
