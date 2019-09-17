@@ -117,6 +117,7 @@ END
 # Perform final operations
 #
 echo "Bumping and tagging new version in Git..."
+git submodule init
 git submodule update
 git add **/__init__.py CHANGELOG.md || error_trap "Error issuing git add"
 git commit -m "Automatic version bump (release.sh)" || error_trap "Error issuing git commit"
