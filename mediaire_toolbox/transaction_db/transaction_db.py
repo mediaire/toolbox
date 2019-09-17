@@ -1,3 +1,4 @@
+import json
 import logging
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -67,6 +68,16 @@ class TransactionDB:
             t.task_state = TaskState.queued
             self.session.add(t)
             self.session.commit()
+            if t.last_message:
+                # load the sequence names to be able to search by them
+                lm = json.loads(t.last_message)
+                sequences = ''
+                if 'dicom_info' in lm:
+                    for series_type in ['matched_t1', 'matched_t2', 'unmatched']:
+                        if series_type in lm['dicom_info']:
+                            for series in lm['dicom_info'][series_type]:
+                                sequences += series['header']['SeriesDescription'] + ' '
+                t.sequences = sequences.strip()
             return t.transaction_id
         except:
             self.session.rollback()
@@ -137,13 +148,15 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def set_completed(self, id_: int, clear_error: bool = True):
+    def set_completed(self, id_: int, clear_error: bool=True):
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
-        End_date automatically adjusted."""
+        End_date automatically adjusted. Status is automatically set to 
+        'unseen'."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.completed
+            t.status = 'unseen'
             t.end_date = datetime.datetime.utcnow()
             if clear_error:
                 t.error = ''
@@ -151,8 +164,21 @@ class TransactionDB:
         except:
             self.session.rollback()
             raise
+        
+    def set_status(self, id_: int, status: str):
+        """to be called e.g. when the radiologist visits the results of a study
+        in the new platform ('reviewed') or the report is sent to the PACS
+        ('sent_to_pacs') ..."""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.status = status
+            t.end_date = datetime.datetime.utcnow()
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
 
-    def set_skipped(self, id_: int, cause: str = None):
+    def set_skipped(self, id_: int, cause: str=None):
         """to be called when the transaction is skipped. Save skip information
         from 'cause'"""
         try:
@@ -166,7 +192,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def set_cancelled(self, id_: int, cause: str = None):
+    def set_cancelled(self, id_: int, cause: str=None):
         """to be called when the transaction is cancelled. Save cancel information
         from 'cause'"""
         try:
