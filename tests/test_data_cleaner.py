@@ -103,14 +103,19 @@ class TestDataCleaner(unittest.TestCase):
         self.assertTrue(
             DataCleaner._check_remove_filter('test.nii', [], ['*.nii']))
 
-    def test__check_remove_filter5(self):
+    def test__check_remove_filter4(self):
         self.assertFalse(DataCleaner._check_remove_filter(
             'test.nii', None, None))
 
-    def test__check_remove_filter6(self):
+    def test__check_remove_filter5(self):
         """Both whitelist and blacklist"""
         self.assertFalse(DataCleaner._check_remove_filter(
             'test.nii', ['test.nii'], ['*.nii']))
+
+    def test__check_remove_filter6(self):
+        """Both whitelist and blacklist"""
+        self.assertTrue(DataCleaner._check_remove_filter(
+            'test.nii', ['not_test.nii'], ['*.nii']))
 
     """Test public functions"""
 
@@ -257,17 +262,58 @@ class TestDataCleaner(unittest.TestCase):
                 ('file4', 13, 30)
             ]
             mock_time.return_value = 20
-            mock_priority = ['file2', 'file4', 'file*']
             dc_instance = DataCleaner(
                 folder='',
                 max_folder_size=1.0*50/1024/1028,
                 max_data_seconds=10,
                 whitelist=['file1', 'file3'],
-                priority_list=mock_priority
+                priority_list=['file2', 'file4', 'file*']
             )
             removed = dc_instance.clean_up(dry_run=True)
             self.assertEqual(
                 [('file2', 5, 10),
                  ('file4', 13, 30)],
+                removed
+            )
+
+    def test_clean_up_priority_list_2(self):
+        with mock.patch.object(DataCleaner, 'scan_dir'), \
+                mock.patch.object(DataCleaner, '_get_file_stats') as mock_files, \
+                mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            # test that 1. files not in priority_list are not removed
+            #    (t.db not removed)
+            # 2. files removed are in the order of the priority list
+            #    (old*.nii removed first)
+            # 3. files on the whitelist are not removed
+            #    (not removing file1.nii and file3.nii)
+            # 4. stop the removing process early if size requirements met
+            #    (0004.dcm not removed)
+            mock_files.return_value = [
+                ('folder1/0001.dcm', 0, 10),
+                ('folder1/0002.dcm', 0, 10),
+                ('folder1/0003.dcm', 0, 10),
+                ('folder1/0004.dcm', 0, 10),
+                ('folder1/folder2/file1.nii', 10, 30),
+                ('folder1/folder2/old_file2.nii', 10, 30),
+                ('folder1/folder2/old_file3.nii', 10, 30),
+                ('folder1/folder2/file4.nii', 10, 30),
+                ('folder2/t.db', 10, 40),
+
+            ]
+            mock_time.return_value = 20
+            dc_instance = DataCleaner(
+                folder='',
+                max_folder_size=1.0*115/1024/1024,
+                max_data_seconds=-1,
+                whitelist=['*file1.nii', '*file3.nii'],
+                priority_list=['*old*.nii', '*nii', '*.dcm', 'file*']
+            )
+            removed = dc_instance.clean_up(dry_run=True)
+            self.assertEqual(
+                [('folder1/folder2/old_file2.nii', 10, 30),
+                 ('folder1/folder2/file4.nii', 10, 30),
+                 ('folder1/0001.dcm', 0, 10),
+                 ('folder1/0002.dcm', 0, 10),
+                 ('folder1/0003.dcm', 0, 10)],
                 removed
             )

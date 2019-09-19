@@ -140,14 +140,12 @@ class DataCleaner:
         NOTE: whitelist has priority over blacklist.
         If a file matches the whitelist, then it should not be deleted in
         any circumstances"""
-        if not blacklist:
-            return False
-        if whitelist:
-            return not DataCleaner._fnmatch(file, whitelist)
-        if blacklist:
-            return DataCleaner._fnmatch(file, blacklist)
+        whitelist_check = (
+            not DataCleaner._fnmatch(file, whitelist) if whitelist else True)
+        blacklist_check = (
+            DataCleaner._fnmatch(file, blacklist) if blacklist else False)
         # no blacklist and whitelist, assume it should not be removed
-        return False
+        return whitelist_check and blacklist_check
 
     @staticmethod
     def _remove_from_file_list(filelist, removed_index_list):
