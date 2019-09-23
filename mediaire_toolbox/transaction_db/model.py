@@ -35,6 +35,7 @@ class Transaction(Base):
     task_progress = Column(Integer, default=0)
     task_skipped = Column(Integer, default=0)
     task_cancelled = Column(Integer, default=0)
+    archived = Column(Integer, default=0)
 
     def to_dict(self):
         return { 'transaction_id': self.transaction_id,
@@ -56,7 +57,9 @@ class Transaction(Base):
                  'task_cancelled': self.task_cancelled,
                  'status': self.status,
                  'institution': self.institution,
-                 'sequences': self.sequences }
+                 'sequences': self.sequences,
+                 'archived': self.archived
+                 }
 
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (

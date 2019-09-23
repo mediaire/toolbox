@@ -22,5 +22,9 @@ MIGRATIONS = {
         "UPDATE transactions SET status = 'sent_to_pacs' WHERE processing_state = 'send_to_pacs'",
         "UPDATE transactions SET status = 'unseen' WHERE processing_state != 'send_to_pacs'"
         # institution & sequences to be filled out by 2.0.0 programmatic migration
+    ],
+    6: [
+        "ALTER TABLE transactions ADD COLUMN archived INT DEFAULT 0",
+        # archived to be filled out by 2.0.0 programmatic migration
     ]
 }
