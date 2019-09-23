@@ -207,8 +207,7 @@ class TransactionDB:
             raise
 
     def set_archived(self, id_: int):
-        """to be called when the transaction is cancelled. Save cancel information
-        from 'cause'"""
+        """to be called when the transaction is archived."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.archived = 1
