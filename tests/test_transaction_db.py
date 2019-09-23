@@ -121,6 +121,19 @@ class TestTransactionDB(unittest.TestCase):
         self.assertTrue(t.end_date > t.start_date)
 
         t_db.close()
+
+    def test_transaction_archived(self):
+        engine = self._get_temp_db(5)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(t.archived, 0)
+        t_db.set_archived(t_id)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(t.archived, 1)
+        t_db.close()
         
     def test_set_status(self):
         engine = self._get_temp_db(42)

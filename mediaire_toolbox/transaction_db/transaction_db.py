@@ -206,6 +206,16 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    def set_archived(self, id_: int):
+        """to be called when the transaction is archived."""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.archived = 1
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
+
     def set_last_message(self, id_: int, last_message: str):
         """Updates the last_message field of the transaction
         with the given string."""
