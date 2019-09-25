@@ -14,7 +14,7 @@ import datetime
 logger = logging.getLogger(__name__)
 
 
-def migrate(session, db_version):
+def migrate(session, engine, db_version):
     """Implementing database migration using a similar idea to Flyway:
     
     https://flywaydb.org/getstarted/firststeps/commandline
@@ -30,6 +30,9 @@ def migrate(session, db_version):
         try:
             for command in migrations.MIGRATIONS[version]:
                 session.execute(command)
+            for script in migrations.MIGRATIONS_SCRIPTS.get(
+                    version, []):
+                script(session, engine)
             db_version.schema_version = version
             session.commit()
         except Exception as e:
@@ -59,7 +62,7 @@ class TransactionDB:
         else:
             # check if the existing database is old, and if so migrate
             if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
-                migrate(self.session, db_version)
+                migrate(self.session, engine, db_version)
 
     def create_transaction(self, t: Transaction) -> int:
         """will set the provided transaction object as queued, 
