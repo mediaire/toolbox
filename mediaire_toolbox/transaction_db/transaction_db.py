@@ -1,4 +1,3 @@
-import json
 import logging
 
 from sqlalchemy.ext.automap import automap_base
@@ -11,6 +10,7 @@ from mediaire_toolbox.transaction_db.model import Transaction, \
                                                   create_all
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox.transaction_db import migrations
+from mediaire_toolbox.transaction_db import index
 import datetime
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,13 @@ def migrate(session, engine, db_version):
     increasing order until we meet the current version.
     There are plenty of schema migration tools but at this point it's not clear
     if we need to add the complexity of such tools on our stack. So we do it
-    ourselves here."""
+    ourselves here.
+    
+    After migrating with sql commands (changing dababase schema),
+    we also run python scripts to index values parsed from the dicom header.
+    Note that the schema_version does not correspond to the indexed values:
+    i.e a schema_version of 5 does not mean the values are indexed.
+    """
     from_schema_version = db_version.schema_version
     for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
         logger.info("Applying database migration to version %s" % version)
@@ -96,27 +102,10 @@ class TransactionDB:
             t.task_state = TaskState.queued
             self.session.add(t)
             self.session.commit()
-            if t.last_message:
-                # load the sequence names to be able to search by them
-                lm = json.loads(t.last_message)
-                sequences = []
-                institution = ''
-                if 'dicom_info' in lm:
-                    try:
-                        institution = (
-                            lm['dicom_info']['t1']['header']
-                            ['InstitutionName'])
-                    except Exception:
-                        pass
-                    for series_type in ['t1', 't2']:
-                        if series_type in lm['dicom_info']:
-                            try:
-                                series = lm['dicom_info'][series_type]
-                                sequences += [series['header']['SeriesDescription']]
-                            except Exception:
-                                pass
-                t.institution = institution
-                t.sequences = ';'.join(sequences)
+
+            index.index_institution(t)
+            index.index_sequences(t)
+            self.session.commit()
             return t.transaction_id
         except Exception:
             self.session.rollback()

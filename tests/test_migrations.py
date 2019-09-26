@@ -4,7 +4,6 @@ import shutil
 import json
 import os
 
-from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 
 from mediaire_toolbox.transaction_db import migrations

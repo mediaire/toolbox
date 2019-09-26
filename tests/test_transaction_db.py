@@ -40,9 +40,11 @@ class TestTransactionDB(unittest.TestCase):
         engine = self._get_temp_db(0)
         tr_1 = self._get_test_transaction()
         tr_1.last_message = json.dumps({
-            'dicom_info': {
-                't1': {'header': {'SeriesDescription': 'series_t1_1'}},
-                't2': {'header': {'SeriesDescription': 'series_t2_1'}}}
+            'data': {
+                'dicom_info': {
+                    't1': {'header': {'SeriesDescription': 'series_t1_1'}},
+                    't2': {'header': {'SeriesDescription': 'series_t2_1'}}}
+            }
         })
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1)
@@ -55,8 +57,10 @@ class TestTransactionDB(unittest.TestCase):
         engine = self._get_temp_db(0)
         tr_1 = self._get_test_transaction()
         tr_1.last_message = json.dumps({
-            'dicom_info': {
-                't1': {'header': {'InstitutionName': 'institute_1'}}}
+            'data': {
+                'dicom_info': {
+                    't1': {'header': {'InstitutionName': 'institute_1'}}}
+            }
         })
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1)

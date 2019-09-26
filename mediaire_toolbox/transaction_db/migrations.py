@@ -1,5 +1,6 @@
 import json
 
+from mediaire_toolbox.transaction_db import index
 
 """SQL Commands that need to be issued in order to migrate the TransactionsDB
 from one version to another. Keyed by target version ID."""
@@ -35,26 +36,12 @@ MIGRATIONS = {
 
 def migrate_institution(session, model):
     for transaction in session.query(model).all():
-        try:
-            institution = (json.loads(transaction.last_message)['data']
-                           ['dicom_info']['t1']['header']['InstitutionName'])
-        except Exception:
-            institution = ''
-        transaction.institution = institution
+        index.index_institution(transaction)
 
 
 def migrate_sequences(session, model):
     for transaction in session.query(model).all():
-        sequence_list = []
-        for series_type in ['t1', 't2']:
-            try:
-                sequence = (json.loads(transaction.last_message)['data']
-                            ['dicom_info'][series_type]['header']
-                            ['SeriesDescription'])
-                sequence_list.append(sequence)
-            except Exception:
-                pass
-        transaction.sequences = ';'.join(sequence_list)
+        index.index_sequences(transaction)
 
 
 MIGRATIONS_SCRIPTS = {
