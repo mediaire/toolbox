@@ -1,7 +1,5 @@
 import json
 
-from sqlalchemy.ext.automap import automap_base
-
 
 """SQL Commands that need to be issued in order to migrate the TransactionsDB
 from one version to another. Keyed by target version ID."""
@@ -35,11 +33,8 @@ MIGRATIONS = {
 }
 
 
-def migrate_institution(session, engine):
-    Base = automap_base()
-    Base.prepare(engine, reflect=True)
-    Transaction = Base.classes.transactions
-    for transaction in session.query(Transaction).all():
+def migrate_institution(session, model):
+    for transaction in session.query(model).all():
         try:
             institution = (json.loads(transaction.last_message)['data']
                            ['dicom_info']['t1']['header']['InstitutionName'])
@@ -48,14 +43,10 @@ def migrate_institution(session, engine):
         transaction.institution = institution
 
 
-def migrate_sequences(session, engine):
-    Base = automap_base()
-    Base.prepare(engine, reflect=True)
-    Transaction = Base.classes.transactions
-    for transaction in session.query(Transaction).all():
+def migrate_sequences(session, model):
+    for transaction in session.query(model).all():
         sequence_list = []
         for series_type in ['t1', 't2']:
-
             try:
                 sequence = (json.loads(transaction.last_message)['data']
                             ['dicom_info'][series_type]['header']

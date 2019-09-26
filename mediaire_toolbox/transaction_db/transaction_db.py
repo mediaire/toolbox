@@ -1,5 +1,7 @@
 import json
 import logging
+
+from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 from mediaire_toolbox.constants import TRANSACTIONS_DB_SCHEMA_NAME, \
@@ -12,6 +14,27 @@ from mediaire_toolbox.transaction_db import migrations
 import datetime
 
 logger = logging.getLogger(__name__)
+
+
+def get_transaction_model(engine):
+    Base = automap_base()
+    Base.prepare(engine, reflect=True)
+    return Base.classes.transactions
+
+
+def migrate_scripts(session, engine, current_version, target_version):
+    model = get_transaction_model(engine)
+    for version in range(current_version + 1, target_version + 1):
+        try:
+            for script in migrations.MIGRATIONS_SCRIPTS.get(
+                    version, []):
+                script(session, model)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            session.close()
+            raise e
+    session.close()
 
 
 def migrate(session, engine, db_version):
@@ -29,15 +52,17 @@ def migrate(session, engine, db_version):
         logger.info("Applying database migration to version %s" % version)
         try:
             for command in migrations.MIGRATIONS[version]:
-                session.execute(command)
-            for script in migrations.MIGRATIONS_SCRIPTS.get(
-                    version, []):
-                script(session, engine)
+                session.execute(command).close()
             db_version.schema_version = version
             session.commit()
         except Exception as e:
             session.rollback()
-            raise e 
+            session.close()
+            raise e
+    for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
+        migrate_scripts(
+            session, engine,
+            from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
 
 
 class TransactionDB:
@@ -74,15 +99,26 @@ class TransactionDB:
             if t.last_message:
                 # load the sequence names to be able to search by them
                 lm = json.loads(t.last_message)
-                sequences = ''
+                sequences = []
+                institution = ''
                 if 'dicom_info' in lm:
-                    for series_type in ['matched_t1', 'matched_t2', 'unmatched']:
+                    try:
+                        institution = (
+                            lm['dicom_info']['t1']['header']
+                            ['InstitutionName'])
+                    except Exception:
+                        pass
+                    for series_type in ['t1', 't2']:
                         if series_type in lm['dicom_info']:
-                            for series in lm['dicom_info'][series_type]:
-                                sequences += series['header']['SeriesDescription'] + ' '
-                t.sequences = sequences.strip()
+                            try:
+                                series = lm['dicom_info'][series_type]
+                                sequences += [series['header']['SeriesDescription']]
+                            except Exception:
+                                pass
+                t.institution = institution
+                t.sequences = ';'.join(sequences)
             return t.transaction_id
-        except:
+        except Exception:
             self.session.rollback()
             raise
 
