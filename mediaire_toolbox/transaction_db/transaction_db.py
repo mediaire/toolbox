@@ -1,5 +1,6 @@
-import json
 import logging
+
+from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 from mediaire_toolbox.constants import TRANSACTIONS_DB_SCHEMA_NAME, \
@@ -9,12 +10,34 @@ from mediaire_toolbox.transaction_db.model import Transaction, \
                                                   create_all
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox.transaction_db import migrations
+from mediaire_toolbox.transaction_db import index
 import datetime
 
 logger = logging.getLogger(__name__)
 
 
-def migrate(session, db_version):
+def get_transaction_model(engine):
+    Base = automap_base()
+    Base.prepare(engine, reflect=True)
+    return Base.classes.transactions
+
+
+def migrate_scripts(session, engine, current_version, target_version):
+    model = get_transaction_model(engine)
+    for version in range(current_version + 1, target_version + 1):
+        try:
+            for script in migrations.MIGRATIONS_SCRIPTS.get(
+                    version, []):
+                script(session, model)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            session.close()
+            raise e
+    session.close()
+
+
+def migrate(session, engine, db_version):
     """Implementing database migration using a similar idea to Flyway:
     
     https://flywaydb.org/getstarted/firststeps/commandline
@@ -23,18 +46,29 @@ def migrate(session, db_version):
     increasing order until we meet the current version.
     There are plenty of schema migration tools but at this point it's not clear
     if we need to add the complexity of such tools on our stack. So we do it
-    ourselves here."""
+    ourselves here.
+    
+    After migrating with sql commands (changing dababase schema),
+    we also run python scripts to index values parsed from the dicom header.
+    Note that the schema_version does not correspond to the indexed values:
+    i.e a schema_version of 5 does not mean the values are indexed.
+    """
     from_schema_version = db_version.schema_version
     for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
         logger.info("Applying database migration to version %s" % version)
         try:
             for command in migrations.MIGRATIONS[version]:
-                session.execute(command)
+                session.execute(command).close()
             db_version.schema_version = version
             session.commit()
         except Exception as e:
             session.rollback()
-            raise e 
+            session.close()
+            raise e
+    for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
+        migrate_scripts(
+            session, engine,
+            from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
 
 
 class TransactionDB:
@@ -59,7 +93,7 @@ class TransactionDB:
         else:
             # check if the existing database is old, and if so migrate
             if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
-                migrate(self.session, db_version)
+                migrate(self.session, engine, db_version)
 
     def create_transaction(self, t: Transaction) -> int:
         """will set the provided transaction object as queued, 
@@ -68,18 +102,12 @@ class TransactionDB:
             t.task_state = TaskState.queued
             self.session.add(t)
             self.session.commit()
-            if t.last_message:
-                # load the sequence names to be able to search by them
-                lm = json.loads(t.last_message)
-                sequences = ''
-                if 'dicom_info' in lm:
-                    for series_type in ['matched_t1', 'matched_t2', 'unmatched']:
-                        if series_type in lm['dicom_info']:
-                            for series in lm['dicom_info'][series_type]:
-                                sequences += series['header']['SeriesDescription'] + ' '
-                t.sequences = sequences.strip()
+
+            index.index_institution(t)
+            index.index_sequences(t)
+            self.session.commit()
             return t.transaction_id
-        except:
+        except Exception:
             self.session.rollback()
             raise
 

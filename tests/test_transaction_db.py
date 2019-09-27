@@ -39,20 +39,35 @@ class TestTransactionDB(unittest.TestCase):
     def test_create_transaction_index_sequences(self):
         engine = self._get_temp_db(0)
         tr_1 = self._get_test_transaction()
-        tr_1.last_message = json.dumps({'dicom_info':{'matched_t1':[{'header':{'SeriesDescription':'series_t1_1'}},
-                                                                    {'header':{'SeriesDescription':'series_t1_2'}}],
-                                                      'matched_t2':[{'header':{'SeriesDescription':'series_t2_1'}},
-                                                                    {'header':{'SeriesDescription':'series_t2_2'}}],
-                                                      'unmatched': [{'header':{'SeriesDescription':'unmatched_1'}},
-                                                                    {'header':{'SeriesDescription':'unmatched_2'}}]
-                                                     }
-                                        })
+        tr_1.last_message = json.dumps({
+            'data': {
+                'dicom_info': {
+                    't1': {'header': {'SeriesDescription': 'series_t1_1'}},
+                    't2': {'header': {'SeriesDescription': 'series_t2_1'}}}
+            }
+        })
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1)
         tr_2 = t_db.get_transaction(t_id)
-        
-        self.assertEqual('series_t1_1 series_t1_2 series_t2_1 series_t2_2 unmatched_1 unmatched_2',
+
+        self.assertEqual('series_t1_1;series_t2_1',
                          tr_2.sequences)
+
+    def test_create_transaction_index_institution(self):
+        engine = self._get_temp_db(0)
+        tr_1 = self._get_test_transaction()
+        tr_1.last_message = json.dumps({
+            'data': {
+                'dicom_info': {
+                    't1': {'header': {'InstitutionName': 'institute_1'}}}
+            }
+        })
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        tr_2 = t_db.get_transaction(t_id)
+
+        self.assertEqual('institute_1',
+                         tr_2.institution)
 
     def test_get_transaction(self):
         engine = self._get_temp_db(1)

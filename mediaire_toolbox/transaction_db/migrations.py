@@ -1,3 +1,7 @@
+import json
+
+from mediaire_toolbox.transaction_db import index
+
 """SQL Commands that need to be issued in order to migrate the TransactionsDB
 from one version to another. Keyed by target version ID."""
 MIGRATIONS = {
@@ -26,5 +30,23 @@ MIGRATIONS = {
     6: [
         "ALTER TABLE transactions ADD COLUMN archived INT DEFAULT 0",
         # archived to be filled out by 2.0.0 programmatic migration
+    ]
+}
+
+
+def migrate_institution(session, model):
+    for transaction in session.query(model).all():
+        index.index_institution(transaction)
+
+
+def migrate_sequences(session, model):
+    for transaction in session.query(model).all():
+        index.index_sequences(transaction)
+
+
+MIGRATIONS_SCRIPTS = {
+    5: [
+        migrate_institution,
+        migrate_sequences,
     ]
 }
