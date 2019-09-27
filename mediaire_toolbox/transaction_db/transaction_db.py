@@ -99,7 +99,8 @@ class TransactionDB:
         """will set the provided transaction object as queued, 
         add it to the DB and return the transaction id.
         
-        If the transaction"""
+        If the transaction has a last_message JSON with chosen T1/T2,
+        it will index the sequence names as well."""
         try:
             t.task_state = TaskState.queued
             self.session.add(t)
