@@ -25,11 +25,12 @@ MIGRATIONS = {
         "ALTER TABLE transactions ADD COLUMN sequences TEXT",
         "UPDATE transactions SET status = 'sent_to_pacs' WHERE processing_state = 'send_to_pacs'",
         "UPDATE transactions SET status = 'unseen' WHERE processing_state != 'send_to_pacs'"
-        # institution & sequences to be filled out by 2.0.0 programmatic migration
     ],
     6: [
         "ALTER TABLE transactions ADD COLUMN archived INT DEFAULT 0",
-        # archived to be filled out by 2.0.0 programmatic migration
+    ],
+    7: [
+        "ALTER TABLE transactions ADD COLUMN study_date TEXT",    
     ]
 }
 
@@ -44,9 +45,17 @@ def migrate_sequences(session, model):
         index.index_sequences(transaction)
 
 
+def migrate_study_date(session, model):
+    for transaction in session.query(model).all():
+        index.index_study_date(transaction)
+
+
 MIGRATIONS_SCRIPTS = {
     5: [
         migrate_institution,
         migrate_sequences,
+    ],
+    7: [
+        migrate_study_date
     ]
 }

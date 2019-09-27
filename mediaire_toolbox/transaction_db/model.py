@@ -32,6 +32,8 @@ class Transaction(Base):
     institution = Column(String())
     # indexed from Task object, for free text search
     sequences = Column(String())
+    # indexed from DICOM header, for sorting
+    study_date = Column(String())
     task_progress = Column(Integer, default=0)
     task_skipped = Column(Integer, default=0)
     task_cancelled = Column(Integer, default=0)
@@ -50,6 +52,7 @@ class Transaction(Base):
                     if self.end_date else None,
                  'task_state': self.task_state.name if self.task_state else None,
                  'processing_state': self.processing_state,
+                 'study_date': self.study_date,
                  'last_message': self.last_message,
                  'task_progress': self.task_progress,
                  'error': self.error,

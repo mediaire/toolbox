@@ -92,3 +92,31 @@ class TestMigration(unittest.TestCase):
         self.assertEqual('T1_sequence;T2_sequence', tr_2.sequences)
 
         t_db.close()
+        
+    def test_migrate_study_date(self):
+        engine = self._get_temp_db(4)
+        t_db = TransactionDB(engine)
+        last_message = {
+            'data': {
+                'dicom_info': {
+                    't1': {
+                        'header': {
+                            'StudyDate': '20190101'
+                        }
+                    }}}}
+        tr_1 = Transaction()
+        tr_1.last_message = json.dumps(last_message)
+        t_id = t_db.create_transaction(tr_1)
+        tr_1 = t_db.get_transaction(t_id)
+        # by default TransactionsDB doesn't set this field
+        self.assertEqual(None, tr_1.study_date)
+
+        # execute migrate python script
+        model = get_transaction_model(engine)
+        migrations.migrate_study_date(t_db.session, model)
+        t_db.session.commit()
+        
+        tr_2 = t_db.get_transaction(t_id)
+        self.assertEqual('20190101', tr_2.study_date)
+
+        t_db.close()

@@ -21,3 +21,12 @@ def index_sequences(transaction):
         except Exception:
             pass
     transaction.sequences = ';'.join(sequence_list)
+
+
+def index_study_date(transaction):
+    try:
+        study_date = (json.loads(transaction.last_message)['data']
+                      ['dicom_info']['t1']['header']['StudyDate'])
+    except Exception:
+        study_date = ''
+    transaction.study_date = study_date
