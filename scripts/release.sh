@@ -127,6 +127,7 @@ git push --tags || error_trap "Error issuing git push --tags"
 
 echo "Building and pushing new image..."
 make build || error_trap "Error building new image"
+`aws ecr get-login --no-include-email --region eu-central-1`
 make push || error_trap "Error pushing new image"
 
 echo "All operations done."
