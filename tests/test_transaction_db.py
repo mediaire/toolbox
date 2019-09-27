@@ -53,22 +53,6 @@ class TestTransactionDB(unittest.TestCase):
         self.assertEqual('series_t1_1;series_t2_1',
                          tr_2.sequences)
 
-    def test_create_transaction_index_institution(self):
-        engine = self._get_temp_db(0)
-        tr_1 = self._get_test_transaction()
-        tr_1.last_message = json.dumps({
-            'data': {
-                'dicom_info': {
-                    't1': {'header': {'InstitutionName': 'institute_1'}}}
-            }
-        })
-        t_db = TransactionDB(engine)
-        t_id = t_db.create_transaction(tr_1)
-        tr_2 = t_db.get_transaction(t_id)
-
-        self.assertEqual('institute_1',
-                         tr_2.institution)
-
     def test_get_transaction(self):
         engine = self._get_temp_db(1)
         tr_1 = self._get_test_transaction()

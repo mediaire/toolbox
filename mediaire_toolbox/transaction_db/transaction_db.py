@@ -97,13 +97,16 @@ class TransactionDB:
 
     def create_transaction(self, t: Transaction) -> int:
         """will set the provided transaction object as queued, 
-        add it to the DB and return the transaction id."""
+        add it to the DB and return the transaction id.
+        
+        If the transaction has a last_message JSON with chosen T1/T2,
+        it will index the sequence names as well."""
         try:
             t.task_state = TaskState.queued
             self.session.add(t)
             self.session.commit()
 
-            index.index_institution(t)
+            #index.index_institution(t)
             index.index_sequences(t)
             self.session.commit()
             return t.transaction_id
