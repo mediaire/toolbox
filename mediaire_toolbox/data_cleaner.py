@@ -170,8 +170,25 @@ class DataCleaner:
                     DataCleaner._sum_filestat_list(removed)/1024/1024))
 
     @staticmethod
+    def clean_file_folder(filelist, file, whitelist, blacklist):
+        """Cleans the folder of the given file."""
+        folder = os.path.dirname(file)
+        removed = []
+        removed_index = []
+        removed_size = 0
+        for i in range(len(filelist)):
+            f, _, size = filelist[i]
+            if DataCleaner._fnmatch(f, [folder + '*']) and f != file:
+                if DataCleaner._check_remove_filter(f, whitelist, blacklist):
+                    removed.append(filelist[i])
+                    removed_index.append(i)
+                    removed_size += size
+        return removed, removed_index, removed_size
+
+
+    @staticmethod
     def clean_files_by_date(filelist, max_data_seconds,
-                            whitelist=None, blacklist=None):
+                            whitelist=None, blacklist=None, clean_folder=False):
         """Clean files that are older than max_data_seconds.
 
         Parameters
@@ -180,6 +197,9 @@ class DataCleaner:
             list of remove candidates, sorted by time.
         max_data_seconds: int
             maximum allowed age for files.
+        clean_folder: boolean
+            True if all files in a deleted folder should be removed.
+            Usecase: remove all dcm files in a folder if one is removed
 
         Returns
         -------
@@ -189,18 +209,25 @@ class DataCleaner:
         removed_index_list = []
         for i in range(len(filelist)):
             file, creation_time, _ = filelist[i]
+            if i in removed_index_list:
+                continue
             if (DataCleaner._check_remove_filter(
                     file, whitelist, blacklist) and
                     DataCleaner._check_remove_time(
                     creation_time, max_data_seconds)):
                 removed.append(filelist[i])
                 removed_index_list.append(i)
+                if clean_folder:
+                    c_removed, c_removed_index, _ = DataCleaner.clean_file_folder(
+                        filelist, file, whitelist, blacklist)
+                    removed += c_removed
+                    removed_index_list += c_removed_index
         DataCleaner._remove_from_file_list(filelist, removed_index_list)
         return removed
 
     @staticmethod
     def clean_files_by_size(filelist, reduce_size,
-                            whitelist=None, blacklist=None):
+                            whitelist=None, blacklist=None, clean_folder=False):
         """Clean the files by size.
 
         Parameters
@@ -209,6 +236,9 @@ class DataCleaner:
             list of remove candidates, sorted by time
         reduce_size: int
             file size that needs to be removed to fulfill quota
+        clean_folder: boolean
+            True if all files in a deleted folder should be removed.
+            Usecase: remove all dcm files in a folder if one is removed
 
         Returns
         -------
@@ -223,10 +253,19 @@ class DataCleaner:
             return removed
         for i in range(len(filelist)):
             file, _, size = filelist[i]
+            if i in removed_index_list:
+                continue
             if DataCleaner._check_remove_filter(file, whitelist, blacklist):
                 removed.append(filelist[i])
                 removed_index_list.append(i)
                 remove_size_counter += size
+                if clean_folder:
+                    c_removed, c_removed_index, c_removed_size = (
+                        DataCleaner.clean_file_folder(
+                            filelist, file, whitelist, blacklist))
+                    removed += c_removed
+                    removed_index_list += c_removed_index
+                    remove_size_counter += c_removed_size
             if remove_size_counter > reduce_size:
                 break
         DataCleaner._remove_from_file_list(filelist, removed_index_list)
@@ -320,9 +359,14 @@ class DataCleaner:
             else:
                 # remove files based on priority list
                 for pattern in self.priority_list:
+                    if pattern == '*.dcm' or pattern == '*dcm':
+                        clean_folder = True
+                    else:
+                        clean_folder = False
                     removed = self.clean_files_by_size(
                         filelist, reduce_size,
-                        whitelist=whitelist, blacklist=[pattern])
+                        whitelist=whitelist, blacklist=[pattern],
+                        clean_folder=clean_folder)
                     reduce_size -= self._sum_filestat_list(removed)
                     remove_list += removed
         if dry_run:

@@ -119,6 +119,27 @@ class TestDataCleaner(unittest.TestCase):
 
     """Test public functions"""
 
+    def test_clean_file_folder(self):
+        filelist = [
+            ('folder1/file1.dcm', 0, 1),
+            ('folder2/file2.dcm', 0, 3),
+            ('folder1/file3.dcm', 0, 5),
+            ('folder1/file4.nii', 0, 7),
+            ('folder1/file5.dcm', 0, 9),
+        ]
+        removed, removed_index, removed_size = DataCleaner.clean_file_folder(
+            filelist, 'folder1/file1.dcm', [], ['*.dcm']
+        )
+
+        self.assertEqual(
+            [
+                ('folder1/file3.dcm', 0, 5),
+                ('folder1/file5.dcm', 0, 9),
+            ], removed)
+
+        self.assertEqual([2, 4], removed_index)
+        self.assertEqual(14, removed_size)
+
     def test_clean_files_by_date_1(self):
         self.assertEqual([], DataCleaner.clean_files_by_date([], 0, [], []))
 
@@ -289,10 +310,10 @@ class TestDataCleaner(unittest.TestCase):
             # 4. stop the removing process early if size requirements met
             #    (0004.dcm not removed)
             mock_files.return_value = [
-                ('folder1/0001.dcm', 0, 10),
-                ('folder1/0002.dcm', 0, 10),
-                ('folder1/0003.dcm', 0, 10),
-                ('folder1/0004.dcm', 0, 10),
+                ('folder1/0001.png', 0, 10),
+                ('folder1/0002.png', 0, 10),
+                ('folder1/0003.png', 0, 10),
+                ('folder1/0004.png', 0, 10),
                 ('folder1/folder2/file1.nii', 10, 30),
                 ('folder1/folder2/old_file2.nii', 10, 30),
                 ('folder1/folder2/old_file3.nii', 10, 30),
@@ -306,14 +327,51 @@ class TestDataCleaner(unittest.TestCase):
                 max_folder_size=1.0*115/1024/1024,
                 max_data_seconds=-1,
                 whitelist=['*file1.nii', '*file3.nii'],
-                priority_list=['*old*.nii', '*nii', '*.dcm', 'file*']
+                priority_list=['*old*.nii', '*nii', '*.png', 'file*']
             )
             removed = dc_instance.clean_up(dry_run=True)
             self.assertEqual(
                 [('folder1/folder2/old_file2.nii', 10, 30),
                  ('folder1/folder2/file4.nii', 10, 30),
-                 ('folder1/0001.dcm', 0, 10),
+                 ('folder1/0001.png', 0, 10),
+                 ('folder1/0002.png', 0, 10),
+                 ('folder1/0003.png', 0, 10)],
+                removed
+            )
+
+    def test_clean_up_priority_list_3_dcms(self):
+        with mock.patch.object(DataCleaner, 'scan_dir'), \
+                mock.patch.object(DataCleaner, '_get_file_stats') as mock_files, \
+                mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            # test that 1. dcm files are removed on a whole
+            mock_files.return_value = [
+                ('folder1/0001.dcm', 0, 10),
+                ('folder1/0002.dcm', 0, 10),
+                ('folder1/0003.dcm', 0, 10),
+                ('folder1/0004.dcm', 0, 10),
+                ('folder2/0001.dcm', 10, 10),
+                ('folder2/0002.dcm', 10, 10),
+                ('folder2/folder3/file1.nii', 10, 10),
+                ('folder3/0001.dcm', 5, 10),
+                ('folder3/0002.dcm', 5, 10),
+                ('folder3/t.db', 10, 10),
+
+            ]
+            mock_time.return_value = 20
+            dc_instance = DataCleaner(
+                folder='',
+                max_folder_size=1.0*55/1024/1024,
+                max_data_seconds=-1,
+                whitelist=[],
+                priority_list=['*.dcm']
+            )
+            removed = dc_instance.clean_up(dry_run=True)
+            self.assertEqual(
+                [('folder1/0001.dcm', 0, 10),
                  ('folder1/0002.dcm', 0, 10),
-                 ('folder1/0003.dcm', 0, 10)],
+                 ('folder1/0003.dcm', 0, 10),
+                 ('folder1/0004.dcm', 0, 10),
+                 ('folder3/0001.dcm', 5, 10),
+                 ('folder3/0002.dcm', 5, 10)],
                 removed
             )

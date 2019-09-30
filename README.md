@@ -10,3 +10,8 @@ Shared toolbox for our pipelines.
 
 Migration:
 add an entry in migrate.py, and then change the version number in constants.py
+
+DataCleaner:
+`whitelist`, `blacklist` and `priority_list` are all glob patterns.
+if in the `priority_list` is `*.dcm` or `*dcm` pattern, then when deciding to remove dcm
+files, all files are removed from that folder for consistency.
