@@ -31,6 +31,9 @@ MIGRATIONS = {
     ],
     7: [
         "ALTER TABLE transactions ADD COLUMN study_date TEXT",    
+    ],
+    8: [
+        "ALTER TABLE transactions ADD COLUMN patient_consent INT DEFAULT 0",
     ]
 }
 

@@ -258,6 +258,24 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    def set_patient_consent(self, id_: int):
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.patient_consent = 1
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def unset_patient_consent(self, id_: int):
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.patient_consent = 0
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
     def close(self):
         self.session.close()
 

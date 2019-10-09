@@ -38,6 +38,7 @@ class Transaction(Base):
     task_skipped = Column(Integer, default=0)
     task_cancelled = Column(Integer, default=0)
     archived = Column(Integer, default=0)
+    patient_consent = Column(Integer, default=0)
 
     def to_dict(self):
         return { 'transaction_id': self.transaction_id,
@@ -61,7 +62,8 @@ class Transaction(Base):
                  'status': self.status,
                  'institution': self.institution,
                  'sequences': self.sequences,
-                 'archived': self.archived
+                 'archived': self.archived,
+                 'patient_consent': self.patient_consent
                  }
 
     def __repr__(self):
