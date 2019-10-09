@@ -222,3 +222,21 @@ class TestTransactionDB(unittest.TestCase):
         t.end_date = datetime.utcnow()
         self.assertTrue(t.to_dict()['task_state'] == 'completed')
         json.dumps(t.to_dict())
+
+    def test_set_patient_consent(self):
+        engine = self._get_temp_db(9)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(0, t.patient_consent)
+        # set patient consent
+        t_db.set_patient_consent(t_id)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(1, t.patient_consent)
+        # unset patient consent
+        t_db.unset_patient_consent(t_id)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(0, t.patient_consent)
+        t_db.close()
