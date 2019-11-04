@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RELEASE_TYPES="('major', 'minor', 'patch')"
-USAGE="release.sh <project_folder> <release_type (one of: ${RELEASE_TYPES})>"
+USAGE="release.sh <project_folder> <release_type (one of: ${RELEASE_TYPES})> <autorelease>"
 
 error_trap() {
     echo "$1" >&2; exit 1
@@ -124,10 +124,11 @@ git commit -m "Automatic version bump (release.sh)" || error_trap "Error issuing
 git tag ${new_version} || error_trap "Error issuing git tag"
 git push origin master || error_trap "Error issuing git push"
 git push --tags || error_trap "Error issuing git push --tags"
-
-echo "Building and pushing new image..."
-make build || error_trap "Error building new image"
-`aws ecr get-login --no-include-email --region eu-central-1`
-make push || error_trap "Error pushing new image"
+if [ -z "$3" ]; then
+    echo "Building and pushing new image..."
+    make build || error_trap "Error building new image"
+    `aws ecr get-login --no-include-email --region eu-central-1`
+    make push || error_trap "Error pushing new image"
+fi
 
 echo "All operations done."
