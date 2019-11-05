@@ -30,7 +30,8 @@ class DataCleaner:
             folder: str
             Path of folder to be cleaned.
         max_folder_size: int
-            Max folder size, delete until current size is smaller than this.
+            Max folder size (in KB), delete until current size is smaller than 
+            this.
             -1 if not deleting files based on size.
         max_data_seconds: int
             Max data age, delete folders that are older than this many seconds.

@@ -28,8 +28,19 @@ class Transaction(Base):
     processing_state = Column(String(255))
     last_message = Column(String)
     error = Column(String())
+    # new platform status: unseen / reviewed / sent_to_pacs 
+    status = Column(String())
+    # indexed from DICOM header, for free text search
+    institution = Column(String())
+    # indexed from Task object, for free text search
+    sequences = Column(String())
+    # indexed from DICOM header, for sorting
+    study_date = Column(String())
     task_progress = Column(Integer, default=0)
     task_skipped = Column(Integer, default=0)
+    task_cancelled = Column(Integer, default=0)
+    archived = Column(Integer, default=0)
+    patient_consent = Column(Integer, default=0)
 
     def to_dict(self):
         return { 'transaction_id': self.transaction_id,
@@ -44,10 +55,18 @@ class Transaction(Base):
                     if self.end_date else None,
                  'task_state': self.task_state.name if self.task_state else None,
                  'processing_state': self.processing_state,
+                 'study_date': self.study_date,
                  'last_message': self.last_message,
                  'task_progress': self.task_progress,
                  'error': self.error,
-                 'task_skipped': self.task_skipped }
+                 'task_skipped': self.task_skipped,
+                 'task_cancelled': self.task_cancelled,
+                 'status': self.status,
+                 'institution': self.institution,
+                 'sequences': self.sequences,
+                 'archived': self.archived,
+                 'patient_consent': self.patient_consent
+                 }
 
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (

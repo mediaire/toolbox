@@ -1,5 +1,7 @@
 import logging
-from sqlalchemy.orm import sessionmaker
+
+from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from mediaire_toolbox.constants import TRANSACTIONS_DB_SCHEMA_NAME, \
                                        TRANSACTIONS_DB_SCHEMA_VERSION
@@ -8,12 +10,34 @@ from mediaire_toolbox.transaction_db.model import Transaction, \
                                                   create_all, UserTransaction
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox.transaction_db import migrations
+from mediaire_toolbox.transaction_db import index
 import datetime
 
 logger = logging.getLogger(__name__)
 
 
-def migrate(session, db_version):
+def get_transaction_model(engine):
+    Base = automap_base()
+    Base.prepare(engine, reflect=True)
+    return Base.classes.transactions
+
+
+def migrate_scripts(session, engine, current_version, target_version):
+    model = get_transaction_model(engine)
+    for version in range(current_version + 1, target_version + 1):
+        try:
+            for script in migrations.MIGRATIONS_SCRIPTS.get(
+                    version, []):
+                script(session, model)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            session.close()
+            raise e
+    session.close()
+
+
+def migrate(session, engine, db_version):
     """Implementing database migration using a similar idea to Flyway:
     
     https://flywaydb.org/getstarted/firststeps/commandline
@@ -22,18 +46,29 @@ def migrate(session, db_version):
     increasing order until we meet the current version.
     There are plenty of schema migration tools but at this point it's not clear
     if we need to add the complexity of such tools on our stack. So we do it
-    ourselves here."""
+    ourselves here.
+    
+    After migrating with sql commands (changing dababase schema),
+    we also run python scripts to index values parsed from the dicom header.
+    Note that the schema_version does not correspond to the indexed values:
+    i.e a schema_version of 5 does not mean the values are indexed.
+    """
     from_schema_version = db_version.schema_version
     for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
         logger.info("Applying database migration to version %s" % version)
         try:
             for command in migrations.MIGRATIONS[version]:
-                session.execute(command)
+                session.execute(command).close()
             db_version.schema_version = version
             session.commit()
         except Exception as e:
             session.rollback()
-            raise e 
+            session.close()
+            raise e
+    for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
+        migrate_scripts(
+            session, engine,
+            from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
 
 
 class TransactionDB:
@@ -46,8 +81,7 @@ class TransactionDB:
         ----------
         engine: SQLAlchemy engine
         """
-        DBSession = sessionmaker(bind=engine)
-        self.session = DBSession()
+        self.session = scoped_session(sessionmaker(bind=engine))
         create_all(engine)
         db_version = self.session.query(SchemaVersion).get(TRANSACTIONS_DB_SCHEMA_NAME)
         if not db_version:
@@ -59,11 +93,14 @@ class TransactionDB:
         else:
             # check if the existing database is old, and if so migrate
             if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
-                migrate(self.session, db_version)
+                migrate(self.session, engine, db_version)
 
     def create_transaction(self, t: Transaction, user_id=None) -> int:
         """will set the provided transaction object as queued, 
-        add it to the DB and return the transaction id."""
+        add it to the DB and return the transaction id.
+        
+        If the transaction has a last_message JSON with chosen T1/T2,
+        it will index the sequence names as well."""
         try:
             t.task_state = TaskState.queued
             self.session.add(t)
@@ -75,8 +112,12 @@ class TransactionDB:
                 ut.transaction_id = t.transaction_id
                 self.session.add(ut)
             self.session.commit()
+
+            #index.index_institution(t)
+            index.index_sequences(t)
+            self.session.commit()
             return t.transaction_id
-        except:
+        except Exception:
             self.session.rollback()
             if(t.transaction_id):
                 self.session.delete(t)
@@ -147,13 +188,15 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def set_completed(self, id_: int, clear_error: bool = True):
+    def set_completed(self, id_: int, clear_error: bool=True):
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
-        End_date automatically adjusted."""
+        End_date automatically adjusted. Status is automatically set to 
+        'unseen'."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.completed
+            t.status = 'unseen'
             t.end_date = datetime.datetime.utcnow()
             if clear_error:
                 t.error = ''
@@ -161,8 +204,21 @@ class TransactionDB:
         except:
             self.session.rollback()
             raise
+        
+    def set_status(self, id_: int, status: str):
+        """to be called e.g. when the radiologist visits the results of a study
+        in the new platform ('reviewed') or the report is sent to the PACS
+        ('sent_to_pacs') ..."""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.status = status
+            t.end_date = datetime.datetime.utcnow()
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
 
-    def set_skipped(self, id_: int, cause: str = None):
+    def set_skipped(self, id_: int, cause: str=None):
         """to be called when the transaction is skipped. Save skip information
         from 'cause'"""
         try:
@@ -176,6 +232,30 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    def set_cancelled(self, id_: int, cause: str=None):
+        """to be called when the transaction is cancelled. Save cancel information
+        from 'cause'"""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.task_cancelled = 1
+            t.end_date = datetime.datetime.utcnow()
+            if cause:
+                t.error = cause
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
+
+    def set_archived(self, id_: int):
+        """to be called when the transaction is archived."""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.archived = 1
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
+
     def set_last_message(self, id_: int, last_message: str):
         """Updates the last_message field of the transaction
         with the given string."""
@@ -184,6 +264,24 @@ class TransactionDB:
             t.last_message = last_message
             self.session.commit()
         except:
+            self.session.rollback()
+            raise
+
+    def set_patient_consent(self, id_: int):
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.patient_consent = 1
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def unset_patient_consent(self, id_: int):
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.patient_consent = 0
+            self.session.commit()
+        except Exception:
             self.session.rollback()
             raise
 

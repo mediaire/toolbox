@@ -12,6 +12,7 @@ from mediaire_toolbox.transaction_db.model import (
     TaskState, Transaction, UserTransaction
 )
 
+
 class TestTransactionDB(unittest.TestCase):
 
     @classmethod
@@ -23,9 +24,9 @@ class TestTransactionDB(unittest.TestCase):
         shutil.rmtree(self.temp_folder)
 
     def _get_temp_db(self, test_index):
-        return create_engine('sqlite:///' +
+        return create_engine('sqlite:///' + 
                              os.path.join(self.temp_folder,
-                                          't' + str(test_index) + '.db') +
+                                          't' + str(test_index) + '.db') + 
                              '?check_same_thread=False')
 
     def _get_test_transaction(self):
@@ -36,6 +37,23 @@ class TestTransactionDB(unittest.TestCase):
         t.study_id = 'S1'
         t.birth_date = datetime(1982, 10, 29)
         return t
+    
+    def test_create_transaction_index_sequences(self):
+        engine = self._get_temp_db(0)
+        tr_1 = self._get_test_transaction()
+        tr_1.last_message = json.dumps({
+            'data': {
+                'dicom_info': {
+                    't1': {'header': {'SeriesDescription': 'series_t1_1'}},
+                    't2': {'header': {'SeriesDescription': 'series_t2_1'}}}
+            }
+        })
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        tr_2 = t_db.get_transaction(t_id)
+
+        self.assertEqual('series_t1_1;series_t2_1',
+                         tr_2.sequences)
 
     def test_get_transaction(self):
         engine = self._get_temp_db(1)
@@ -100,7 +118,35 @@ class TestTransactionDB(unittest.TestCase):
         t = t_db.get_transaction(t_id)
 
         self.assertEqual(t.task_state, TaskState.completed)
+        self.assertEqual(t.status, 'unseen')
         self.assertTrue(t.end_date > t.start_date)
+
+        t_db.close()
+
+    def test_transaction_archived(self):
+        engine = self._get_temp_db(5)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(t.archived, 0)
+        t_db.set_archived(t_id)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(t.archived, 1)
+        t_db.close()
+        
+    def test_set_status(self):
+        engine = self._get_temp_db(42)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+
+        t_db.set_status(t_id, 'reviewed')
+        t = t_db.get_transaction(t_id)
+
+        self.assertEqual(t.status, 'reviewed')
 
         t_db.close()
 
@@ -121,8 +167,25 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db.close()
 
-    def test_change_last_message(self):
+    def test_transaction_cancelled(self):
         engine = self._get_temp_db(6)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+
+        # to be called when a transaction is skipped
+        t_db.set_cancelled(t_id, 'because it is cancelled')
+        t = t_db.get_transaction(t_id)
+
+        self.assertEqual(t.task_cancelled, 1)
+        self.assertTrue(t.end_date > t.start_date)
+        self.assertEqual(t.error, 'because it is cancelled')
+
+        t_db.close()
+
+    def test_change_last_message(self):
+        engine = self._get_temp_db(7)
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -136,10 +199,9 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db.close()
 
-
     @unittest.expectedFailure
     def test_fail_on_get_non_existing_transaction(self):
-        engine = self._get_temp_db(7)
+        engine = self._get_temp_db(8)
         t_db = TransactionDB(engine)
         t_db.get_transaction(1)
 
@@ -181,3 +243,21 @@ class TestTransactionDB(unittest.TestCase):
         t.end_date = datetime.utcnow()
         self.assertTrue(t.to_dict()['task_state'] == 'completed')
         json.dumps(t.to_dict())
+
+    def test_set_patient_consent(self):
+        engine = self._get_temp_db(9)
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(0, t.patient_consent)
+        # set patient consent
+        t_db.set_patient_consent(t_id)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(1, t.patient_consent)
+        # unset patient consent
+        t_db.unset_patient_consent(t_id)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(0, t.patient_consent)
+        t_db.close()

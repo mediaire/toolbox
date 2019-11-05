@@ -7,10 +7,11 @@ from mediaire_toolbox.queue.tasks import Task
 class TestTask(unittest.TestCase):
 
     def setUp(self):
+
+        self.task = Task(tag='tag',
+                         error="an error")
         self.task_d = {"t_id": 1,
-                       "user_id": 10,
                        "tag": "spm_lesion",
-                       "output": {"foo": "bar"},
                        "timestamp": 1530368396,
                        "data": {"dicom_info":
                                     {"t1": {"path": "path",
@@ -19,6 +20,17 @@ class TestTask(unittest.TestCase):
                                      }
                                 }
                        }
+
+    def test_to_dict(self):
+        d = self.task.to_dict()
+        self.assertIn('tag', d)
+        self.assertEqual(d['tag'], 'tag')
+        self.assertEqual(d['error'], 'an error')
+
+    def test_from_and_to_bytes(self):
+        bytes_ = self.task.to_bytes()
+        task_from_bytes = Task().read_bytes(bytes_)
+        self.assertEqual(task_from_bytes.__dict__, self.task.__dict__)
 
     def test_read_dict(self):
         task = Task().read_dict(self.task_d)
