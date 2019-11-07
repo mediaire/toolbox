@@ -15,7 +15,7 @@ class Transaction(Base):
 
     __tablename__ = 'transactions'
 
-    """A general transaction, this could be used by any other pipeline"""
+    """A general transaction, this could be used by any pipeline"""
     transaction_id = Column(Integer, Sequence(
         'transaction_id'), primary_key=True)
     study_id = Column(String(255))
@@ -66,7 +66,7 @@ class Transaction(Base):
                  'sequences': self.sequences,
                  'archived': self.archived,
                  'patient_consent': self.patient_consent
-                 }
+                }
 
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (
@@ -75,6 +75,7 @@ class Transaction(Base):
 
 class User(Base):
     
+    """for multi-tenant pipelines, users might be required"""
     __tablename__ = 'users'
         
     id = Column(Integer, Sequence('id'), primary_key=True)
@@ -98,16 +99,47 @@ class User(Base):
 
 class UserTransaction(Base):
     
+    """for multi-tenant pipelines, transactions might be associated with users"""
     __tablename__ = 'users_transactions'
         
-    user_id = Column(Integer, ForeignKey('users.id'), 
+    user_id = Column(Integer, ForeignKey('users.id'),
                      primary_key=True)
-    transaction_id = Column(Integer, ForeignKey('transactions.transaction_id'), 
+    transaction_id = Column(Integer, ForeignKey('transactions.transaction_id'),
                             primary_key=True)
     
     def to_dict(self):
         return { 'user_id': self.user_id,
                  'transaction_id': self.transaction_id }
+
+
+class UserRole(Base):
+    
+    """for multi-tenant pipelines, users might have different roles in the 
+    associated platform"""
+    __tablename__ = 'users_roles'
+        
+    user_id = Column(Integer, ForeignKey('users.id'),
+                     primary_key=True)
+    role_id = Column(String(64), ForeignKey('roles.role_id'),
+                     primary_key=True)
+    
+    def to_dict(self):
+        return { 'user_id': self.user_id,
+                 'role_id': self.role_id }
+    
+    
+class Role(Base):
+
+    """for multi-tenant pipelines, users might have different roles in the 
+    associated platform"""
+    __tablename__ = 'roles'
+
+    role_id = Column(String(64),
+                     primary_key=True)
+    description = Column(String)
+    
+    def to_dict(self):
+        return {'role_id': self.user_id}
 
 
 class SchemaVersion(Base):
