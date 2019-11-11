@@ -9,7 +9,11 @@ temp_db = TempDBFactory('test_user_service')
 
 
 class TestUserService(unittest.TestCase):
-        
+    
+    @classmethod
+    def tearDownClass(self):
+        temp_db.delete_temp_folder()
+
     def test_permission_mask_to_id_set(self):
         set_ = UserService.permission_mask_to_id_set(130)
         self.assertEqual(2, len(set_))
