@@ -10,9 +10,9 @@ from sqlalchemy import create_engine
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB, TransactionDBException
 from mediaire_toolbox.transaction_db.model import Transaction
 
-TEST_RANGE = 25
-TEST_PROCESS_RANGE = 25
-TIMEOUT = 15
+TEST_RANGE = 10
+TEST_PROCESS_RANGE = 10
+TIMEOUT = 30
 
 
 def child_process_fn(folder, name):

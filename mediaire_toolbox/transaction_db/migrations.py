@@ -1,5 +1,3 @@
-import json
-
 from mediaire_toolbox.transaction_db import index
 
 """SQL Commands that need to be issued in order to migrate the TransactionsDB
@@ -34,7 +32,8 @@ MIGRATIONS = {
     ],
     8: [
         "ALTER TABLE transactions ADD COLUMN patient_consent INT DEFAULT 0",
-    ]
+    ],
+    9: []
 }
 
 

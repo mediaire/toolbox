@@ -1,7 +1,9 @@
 import datetime
 
-from sqlalchemy import Column, Integer, String, Sequence, DateTime, Date, Enum
+from sqlalchemy import Column, Integer, String, Sequence, DateTime, Date, Enum, \
+                        ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from passlib.apps import custom_app_context as pwd_context
 
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox import constants
@@ -13,7 +15,7 @@ class Transaction(Base):
 
     __tablename__ = 'transactions'
 
-    """A general transaction, this could be used by any other pipeline"""
+    """A general transaction, this could be used by any pipeline"""
     transaction_id = Column(Integer, Sequence(
         'transaction_id'), primary_key=True)
     study_id = Column(String(255))
@@ -64,20 +66,91 @@ class Transaction(Base):
                  'sequences': self.sequences,
                  'archived': self.archived,
                  'patient_consent': self.patient_consent
-                 }
+                }
 
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (
             self.transaction_id, self.patient_id, self.start_date)
 
 
+class User(Base):
+    
+    """for multi-tenant pipelines, users might be required"""
+    __tablename__ = 'users'
+        
+    id = Column(Integer, Sequence('id'), primary_key=True)
+    name = Column(String(255), unique=True)
+    hashed_password = Column(String(128))
+    added = Column(DateTime(), default=datetime.datetime.utcnow)
+    
+    @staticmethod
+    def password_hash(password):
+        return pwd_context.hash(password)
+
+    def verify_password(self, password):
+        return pwd_context.verify(password, self.hashed_password)
+    
+    def to_dict(self):
+        return { 'id': self.id,
+                 'name': self.name,
+                 'hashed_password': self.hashed_password,
+                 'added': self.added.strftime("%Y-%m-%d %H:%M:%S") }
+        
+
+class UserTransaction(Base):
+    
+    """for multi-tenant pipelines, transactions might be associated with users"""
+    __tablename__ = 'users_transactions'
+        
+    user_id = Column(Integer, ForeignKey('users.id'),
+                     primary_key=True)
+    transaction_id = Column(Integer, ForeignKey('transactions.transaction_id'),
+                            primary_key=True)
+    
+    def to_dict(self):
+        return { 'user_id': self.user_id,
+                 'transaction_id': self.transaction_id }
+
+
+class UserRole(Base):
+    
+    """for multi-tenant pipelines, users might have different roles in the 
+    associated platform"""
+    __tablename__ = 'users_roles'
+        
+    user_id = Column(Integer, ForeignKey('users.id'),
+                     primary_key=True)
+    role_id = Column(String(64), ForeignKey('roles.role_id'),
+                     primary_key=True)
+    
+    def to_dict(self):
+        return { 'user_id': self.user_id,
+                 'role_id': self.role_id }
+    
+    
+class Role(Base):
+
+    """for multi-tenant pipelines, users might have different roles in the 
+    associated platform"""
+    __tablename__ = 'roles'
+
+    role_id = Column(String(64),
+                     primary_key=True)
+    description = Column(String)
+    # encoded permissions for this role, 1 bit for each
+    permissions = Column(Integer)
+    
+    def to_dict(self):
+        return {'role_id': self.user_id}
+
+
 class SchemaVersion(Base):
     
     __tablename__ = 'schema_version'
     
-    schema = Column(String(255), primary_key=True, 
+    schema = Column(String(255), primary_key=True,
                     default=constants.TRANSACTIONS_DB_SCHEMA_NAME)
-    schema_version = Column(Integer, 
+    schema_version = Column(Integer,
                             default=constants.TRANSACTIONS_DB_SCHEMA_VERSION)
 
     

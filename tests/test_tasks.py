@@ -7,6 +7,7 @@ from mediaire_toolbox.queue.tasks import Task
 class TestTask(unittest.TestCase):
 
     def setUp(self):
+
         self.task = Task(tag='tag',
                          error="an error")
         self.task_d = {"t_id": 1,
@@ -40,6 +41,7 @@ class TestTask(unittest.TestCase):
         new_tag = 'child_task'
         child_task = task.create_child(new_tag)
         self.assertEqual(child_task.t_id, task.t_id)
+        self.assertEqual(child_task.user_id, task.user_id)
         self.assertEqual(child_task.tag, new_tag)
         self.assertEqual(child_task.timestamp, task.timestamp)
         self.assertNotEqual(child_task.update_timestamp,

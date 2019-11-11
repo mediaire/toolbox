@@ -7,7 +7,12 @@ from mediaire_toolbox.constants import TRANSACTIONS_DB_SCHEMA_NAME, \
                                        TRANSACTIONS_DB_SCHEMA_VERSION
 from mediaire_toolbox.transaction_db.model import Transaction, \
                                                   SchemaVersion, \
-                                                  create_all
+                                                  create_all, \
+                                                  UserTransaction, \
+                                                  User, \
+                                                  Role, \
+                                                  UserRole
+                                                  
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox.transaction_db import migrations
 from mediaire_toolbox.transaction_db import index
@@ -95,7 +100,7 @@ class TransactionDB:
             if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
                 migrate(self.session, engine, db_version)
 
-    def create_transaction(self, t: Transaction) -> int:
+    def create_transaction(self, t: Transaction, user_id=None) -> int:
         """will set the provided transaction object as queued, 
         add it to the DB and return the transaction id.
         
@@ -104,14 +109,27 @@ class TransactionDB:
         try:
             t.task_state = TaskState.queued
             self.session.add(t)
+            # when we commit, we get the transaction ID
+            self.session.commit()
+            if user_id:
+                user = self.session.query(User).get(user_id)
+                if not user:
+                    raise TransactionDBException(("The provided user doesn't "
+                                                  "exist"))                
+                ut = UserTransaction()
+                ut.user_id = user_id
+                ut.transaction_id = t.transaction_id
+                self.session.add(ut)
             self.session.commit()
 
-            #index.index_institution(t)
+            # index.index_institution(t)
             index.index_sequences(t)
             self.session.commit()
             return t.transaction_id
         except Exception:
             self.session.rollback()
+            if(t.transaction_id):
+                self.session.delete(t)
             raise
 
     def get_transaction(self, id_: int) -> Transaction:
@@ -259,6 +277,7 @@ class TransactionDB:
             raise
 
     def set_patient_consent(self, id_: int):
+        """Mark this transaction ID with data usage patient consent"""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.patient_consent = 1
@@ -268,6 +287,7 @@ class TransactionDB:
             raise
 
     def unset_patient_consent(self, id_: int):
+        """Mark this transaction ID with NO data usage patient consent"""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.patient_consent = 0
@@ -275,12 +295,135 @@ class TransactionDB:
         except Exception:
             self.session.rollback()
             raise
+        
+    def add_user(self, name, password):
+        """For multi-tenant transaction DBs, add a new user to it.
+        
+        The provided (clear) password will be hashed in the database.
+        Returns the user ID set by the database upon successful insert.
+        
+        TransactionDBException will be thrown if a user with the same
+        name already exists."""
+        try:
+            user = self.session.query(User).filter_by(name=name).first()
+            if user:
+                raise TransactionDBException(("A user with the same "
+                                              "name already exists"))
+                
+            user = User()
+            user.name = name
+            user.hashed_password = user.password_hash(password)
+            self.session.add(user)
+            self.session.commit()            
+            user = self.session.query(User).filter_by(name=name).first()
+            return user.id
+        finally:
+            self.session.rollback()        
+        
+    def add_role(self, role_id: str, role_description: str,
+                 permissions: int):
+        """For multi-tenant transaction DBs, where users have certain roles,
+        add a new role in the database.
+        
+        TransactionDBException will be thrown if the role already exists."""
+        try:
+            role = self.session.query(Role).filter_by(role_id=role_id).first()
+            if role:
+                raise TransactionDBException(("The role already exists"))
+            
+            role = Role()
+            role.role_id = role_id
+            role.description = role_description
+            role.permissions = permissions
+            self.session.add(role)
+            self.session.commit()
+        finally:
+            self.session.rollback()
+            
+    def __pre_conditions_user_role(self, user_id, role_id):
+        user = self.session.query(User).get(user_id)
+        if not user:
+            raise TransactionDBException(("The user doesn't exist"))
+        
+        role = self.session.query(Role).get(role_id)
+        if not role:
+            raise TransactionDBException(("The role doesn't exist"))
+            
+    def add_user_role(self, user_id: int, role_id: str):
+        """
+        Assign a role to a user.
+        
+        Parameters:
+        -----------
+            user_id: the numeric user ID returned by the database from a user
+              which already exists in the Users table.
+            role_id: the role identifier (string) which should exist in the
+              roles table already.
+        
+        TransactionDBException will be thrown if the user-role assignment
+        already exists.
 
+        Other exceptions will be thrown by the database if the user doesn't 
+        exist or the role doesn't exist.
+        """
+        try:
+            user_role = self.session.query(UserRole).filter_by(user_id=user_id)\
+                                                    .filter_by(role_id=role_id)\
+                                                    .first()
+            if user_role:
+                raise TransactionDBException(("The role is already assigned"
+                                              " to this user."))
+            
+            self.__pre_conditions_user_role(user_id, role_id)
+            
+            user_role = UserRole()
+            user_role.role_id = role_id
+            user_role.user_id = user_id
+            self.session.add(user_role)
+            self.session.commit()
+        finally:
+            self.session.rollback()
+    
+    def revoke_user_role(self, user_id: int, role_id: str):
+        """Revoke a role from a user.
+        
+        Parameters:
+        -----------
+            user_id: the numeric user ID returned by the database from a user
+              which already exists in the Users table.
+            role_id: the role identifier (string) which should exist in the
+              roles table already.
+                     
+        TransactionDBException will be thrown if the user-role assignment
+        didn't exist in the first place.
+        """
+        try:
+            user_role = self.session.query(UserRole).filter_by(user_id=user_id)\
+                                                    .filter_by(role_id=role_id)\
+                                                    .first()
+            if not user_role:
+                raise TransactionDBException(("The role wasn't assigned"
+                                              " to this user."))
+            
+            self.session.delete(user_role)
+            self.session.commit()
+        finally:
+            self.session.rollback()
+        
+    def remove_user(self, user_id: int):
+        """Remove a user from the database"""
+        try:
+            user = self.session.query(User).get(user_id)
+            if not user:
+                raise TransactionDBException("The user doesn't exist")
+            self.session.delete(user)
+            self.session.commit()            
+        finally:
+            self.session.rollback()   
+        
     def close(self):
         self.session.close()
 
 
 class TransactionDBException(Exception):
-
-    def __init__(self, msg):
-        super().__init__(self, msg)
+    pass

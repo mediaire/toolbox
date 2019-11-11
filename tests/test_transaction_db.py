@@ -8,24 +8,19 @@ from datetime import datetime
 from sqlalchemy import create_engine
 
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
-from mediaire_toolbox.transaction_db.model import TaskState, Transaction
+from mediaire_toolbox.transaction_db.model import (
+    TaskState, Transaction, UserTransaction, User, Role, UserRole
+)
 
+from temp_db_base import TempDBFactory
+
+temp_db = TempDBFactory('test_transaction_db')
 
 class TestTransactionDB(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(self):
-        self.temp_folder = tempfile.mkdtemp(suffix='_test_transaction_db_')
-
+        
     @classmethod
     def tearDownClass(self):
-        shutil.rmtree(self.temp_folder)
-
-    def _get_temp_db(self, test_index):
-        return create_engine('sqlite:///' + 
-                             os.path.join(self.temp_folder,
-                                          't' + str(test_index) + '.db') + 
-                             '?check_same_thread=False')
+        temp_db.delete_temp_folder()
 
     def _get_test_transaction(self):
         t = Transaction()
@@ -37,7 +32,7 @@ class TestTransactionDB(unittest.TestCase):
         return t
     
     def test_create_transaction_index_sequences(self):
-        engine = self._get_temp_db(0)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
         tr_1.last_message = json.dumps({
             'data': {
@@ -54,7 +49,7 @@ class TestTransactionDB(unittest.TestCase):
                          tr_2.sequences)
 
     def test_get_transaction(self):
-        engine = self._get_temp_db(1)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -72,7 +67,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
 
     def test_change_processing_state(self):
-        engine = self._get_temp_db(2)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -88,7 +83,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
 
     def test_transaction_failed(self):
-        engine = self._get_temp_db(3)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -105,7 +100,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
 
     def test_transaction_completed(self):
-        engine = self._get_temp_db(4)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -122,7 +117,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
 
     def test_transaction_archived(self):
-        engine = self._get_temp_db(5)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -135,7 +130,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
         
     def test_set_status(self):
-        engine = self._get_temp_db(42)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -149,7 +144,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
 
     def test_transaction_skipped(self):
-        engine = self._get_temp_db(5)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -166,7 +161,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
 
     def test_transaction_cancelled(self):
-        engine = self._get_temp_db(6)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -183,7 +178,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
 
     def test_change_last_message(self):
-        engine = self._get_temp_db(7)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -199,10 +194,30 @@ class TestTransactionDB(unittest.TestCase):
 
     @unittest.expectedFailure
     def test_fail_on_get_non_existing_transaction(self):
-        engine = self._get_temp_db(8)
+        engine = temp_db.get_temp_db()
         t_db = TransactionDB(engine)
         t_db.get_transaction(1)
 
+    def test_transaction_with_user_id(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        t_id = t_db.create_transaction(tr_1, user_id)
+
+        t = t_db.get_transaction(t_id)
+        self.assertNotEqual(None, t)
+        
+        ut = t_db.session.query(UserTransaction) \
+            .filter_by(transaction_id=t.transaction_id) \
+            .filter_by(user_id=user_id).first()
+        
+        self.assertEqual(ut.user_id, user_id)
+        self.assertEqual(t.transaction_id, ut.transaction_id)
+
+        t_db.close()
+        
     def test_migrations(self):
         temp_folder = tempfile.mkdtemp(suffix='_test_migrations_transaction_db_')
         temp_db_path = os.path.join(temp_folder, 't_v1.db')
@@ -224,7 +239,7 @@ class TestTransactionDB(unittest.TestCase):
         json.dumps(t.to_dict())
 
     def test_set_patient_consent(self):
-        engine = self._get_temp_db(9)
+        engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
@@ -240,3 +255,115 @@ class TestTransactionDB(unittest.TestCase):
         t = t_db.get_transaction(t_id)
         self.assertEqual(0, t.patient_consent)
         t_db.close()
+
+    def test_add_user_ok(self):
+        """test that we can add User entity"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        user = t_db.session.query(User).get(user_id)
+        self.assertEqual('Pere', user.name)
+        self.assertTrue(user.hashed_password)
+    
+    def test_remove_user_ok(self):
+        """test that we can remove an existing user from the database"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        user = t_db.session.query(User).get(user_id)
+        self.assertEqual('Pere', user.name)
+        t_db.remove_user(user_id)
+        user = t_db.session.query(User).get(user_id)
+        self.assertFalse(user)
+        
+    @unittest.expectedFailure
+    def test_add_user_already_exists(self):
+        """test that we can't add duplicate users by user name"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        self.assertTrue(user_id >= 0)
+        t_db.add_user('Pere', 'pwd')
+    
+    def test_add_role_ok(self):
+        """test that we can add a Role entity"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        t_db.add_role('radiologist', 'whatever', 128)
+        role = t_db.session.query(Role).get('radiologist')
+        self.assertEqual('whatever', role.description)
+        self.assertEqual(128, role.permissions)
+            
+    @unittest.expectedFailure
+    def test_add_role_already_exists(self):
+        """test that we can't add the same Role twice"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        t_db.add_role('radiologist', 'whatever')
+        t_db.add_role('radiologist', 'whatever')
+
+    def __user_has_role(self, t_db, user_id, role_id):
+        return t_db.session.query(UserRole).filter_by(user_id=user_id)\
+                                           .filter_by(role_id=role_id)\
+                                           .first()
+
+    def test_add_user_role_ok(self):
+        """test that we can assign a role to a user"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        t_db.add_role('radiologist', 'whatever', 128)
+
+        t_db.add_user_role(user_id, 'radiologist')
+        
+        self.assertTrue(self.__user_has_role(t_db, user_id, 'radiologist'))
+        
+    @unittest.expectedFailure
+    def test_add_user_role_fail_on_non_existing_role(self):
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        
+        t_db.add_user_role(user_id, 'radiologist')
+    
+    @unittest.expectedFailure    
+    def test_add_user_role_fail_on_non_existing_user(self):
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        t_db.add_role('radiologist', 'whatever')
+
+        t_db.add_user_role(1, 'radiologist')
+    
+    @unittest.expectedFailure
+    def test_add_user_role_already_exists(self):
+        """test that we can't assign twice the same role to a user"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        t_db.add_role('radiologist', 'whatever')
+
+        t_db.add_user_role(user_id, 'radiologist')
+        t_db.add_user_role(user_id, 'radiologist')
+
+    def test_revoke_user_role_ok(self):
+        """test that we can revoke a role from a user"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        t_db.add_role('radiologist', 'whatever', 128)
+        
+        t_db.add_user_role(user_id, 'radiologist')
+        self.assertTrue(self.__user_has_role(t_db, user_id, 'radiologist'))
+        t_db.revoke_user_role(user_id, 'radiologist')        
+        self.assertFalse(self.__user_has_role(t_db, user_id, 'radiologist'))
+
+    @unittest.expectedFailure
+    def test_revoke_user_role_didnt_exist(self):
+        """test that an Exception is thrown if we want to revoke an
+        already revoked role from a user"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id = t_db.add_user('Pere', 'pwd')
+        t_db.add_role('radiologist', 'whatever')
+        
+        t_db.revoke_user_role(user_id, 'radiologist')        
