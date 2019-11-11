@@ -112,6 +112,10 @@ class TransactionDB:
             # when we commit, we get the transaction ID
             self.session.commit()
             if user_id:
+                user = self.session.query(User).get(user_id)
+                if not user:
+                    raise TransactionDBException(("The provided user doesn't "
+                                                  "exist"))                
                 ut = UserTransaction()
                 ut.user_id = user_id
                 ut.transaction_id = t.transaction_id
@@ -316,7 +320,8 @@ class TransactionDB:
         finally:
             self.session.rollback()        
         
-    def add_role(self, role_id: str, role_description: str):
+    def add_role(self, role_id: str, role_description: str,
+                 permissions: int):
         """For multi-tenant transaction DBs, where users have certain roles,
         add a new role in the database.
         
@@ -329,6 +334,7 @@ class TransactionDB:
             role = Role()
             role.role_id = role_id
             role.description = role_description
+            role.permissions = permissions
             self.session.add(role)
             self.session.commit()
         finally:
@@ -403,6 +409,17 @@ class TransactionDB:
             self.session.commit()
         finally:
             self.session.rollback()
+        
+    def remove_user(self, user_id: int):
+        """Remove a user from the database"""
+        try:
+            user = self.session.query(User).get(user_id)
+            if not user:
+                raise TransactionDBException("The user doesn't exist")
+            self.session.delete(user)
+            self.session.commit()            
+        finally:
+            self.session.rollback()   
         
     def close(self):
         self.session.close()

@@ -137,6 +137,8 @@ class Role(Base):
     role_id = Column(String(64),
                      primary_key=True)
     description = Column(String)
+    # encoded permissions for this role, 1 bit for each
+    permissions = Column(Integer)
     
     def to_dict(self):
         return {'role_id': self.user_id}
