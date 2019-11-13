@@ -17,7 +17,7 @@ class TestDataCleaner(unittest.TestCase):
 
     def test_check_valid_init(self):
         DataCleaner(
-            None, 0, 0,
+            None, 0, 0, -1,
             None, ['*.nii'], ['test.nii'])
 
     def test__creation_time_and_size(self):
@@ -375,3 +375,27 @@ class TestDataCleaner(unittest.TestCase):
                  ('folder3/0002.dcm', 5, 10)],
                 removed
             )
+            
+    def test_do_not_clean_young_files(self):
+        with mock.patch.object(DataCleaner, 'scan_dir'), \
+                mock.patch.object(DataCleaner, '_get_file_stats') as mock_files, \
+                mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            mock_files.return_value = [
+                ('file1', 15, 30),
+                ('file2', 5, 10),
+                ('file3', 11, 30),
+                ('file4', 13, 30)
+            ]
+            mock_time.return_value = 20
+            # file2 is 15 seconds old
+            # file4 is 7 seconds old
+            dc_instance = DataCleaner(
+                folder='',
+                max_folder_size=1024*1024,
+                max_data_seconds=10,
+                whitelist=['file1', 'file3'],
+                blacklist=['file*'],
+                min_data_seconds=8
+            )
+            removed = dc_instance.clean_up(dry_run=True)
+            self.assertEqual([('file2', 5, 10)], removed)
