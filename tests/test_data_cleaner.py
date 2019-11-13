@@ -1,11 +1,8 @@
 import unittest
 import logging
 import tempfile
-import time
-import shutil
-import os
-import argparse
 import mock
+import shutil
 
 from mediaire_toolbox.data_cleaner import DataCleaner, main
 
@@ -13,264 +10,368 @@ logging.basicConfig(format='%(asctime)s %(levelname)s  %(module)s:%(lineno)s '
                     '%(message)s', level=logging.DEBUG)
 
 
-class TestUtils(unittest.TestCase):
+class TestDataCleaner(unittest.TestCase):
+    """Test protected member functions"""
+    def test_check_valid_init_raise(self):
+        self.assertRaises(ValueError, DataCleaner, None, 0, 0)
 
-    def test_remove_older_than_specified_age(self):
-        # important, it's not atomic/thread-safe
-        temp_folder = tempfile.mkdtemp(suffix='_test_1')
-        sub_folder_1 = tempfile.mkdtemp(dir=temp_folder)
-        sub_folder_2 = tempfile.mkdtemp(dir=temp_folder)
+    def test_check_valid_init(self):
+        DataCleaner(
+            None, 0, 0,
+            None, ['*.nii'], ['test.nii'])
 
-        current_time = time.time()
+    def test__creation_time_and_size(self):
+        class mock_class():
+            def __init__(self, time, size):
+                self.st_ctime = time
+                self.st_size = size
+        with mock.patch('os.stat') as mock_stat:
+            mock_stat.return_value = mock_class('time', 'size')
+            self.assertEqual(
+                ('file1', 'time', 'size'),
+                DataCleaner._creation_time_and_size('file1')
+            )
 
-        def current_size(folder):
-            folder_size = {temp_folder: 1024,
-                           sub_folder_1: 512,
-                           sub_folder_2: 512}
-            return folder_size[folder]
+    def test__sum_filestat_list_1(self):
+        self.assertEqual(0, DataCleaner._sum_filestat_list([]))
 
-        def creation_time(folder):
-            # mock creation time so first folder is 10 seconds old and second
-            # is 20 seconds old
-            return int(current_time - 10) if folder == sub_folder_1 \
-                                          else int(current_time - 20)
+    def test__sum_filestat_list_2(self):
+        self.assertEqual(
+            1, DataCleaner._sum_filestat_list([("duh", 0, 1)]))
 
-        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size, \
-             mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
-                mocked_current_size.side_effect = current_size
-                mocked_creation_time.side_effect = creation_time
+    def test__sum_filestat_list_3(self):
+        self.assertEqual(
+            3, DataCleaner._sum_filestat_list(
+                [("duh", 0, 1), ("brah", 0, 2)]))
 
-                # remove folders older than 15 seconds
-                mocked_data_cleaner = DataCleaner(temp_folder, 1024 * 1024, 15)
+    def test__sort_filestat_list_1(self):
+        self.assertEqual([], DataCleaner._sort_filestat_list_by_time([]))
 
-                removed = mocked_data_cleaner.clean_up(dry_run=True)
-                self.assertTrue(len(removed) == 1)
-                self.assertEqual(removed[0], sub_folder_2)
-                shutil.rmtree(temp_folder)
+    def test__sort_filestat_list_2(self):
+        filelist = [('file1', 0, 0)]
+        self.assertEqual(filelist, DataCleaner._sort_filestat_list_by_time(filelist))
 
-    def test_remove_based_on_total_folder_size(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_2')
-        sub_folder_1 = tempfile.mkdtemp(dir=temp_folder)
-        sub_folder_2 = tempfile.mkdtemp(dir=temp_folder)
+    def test__sort_filestat_list_3(self):
+        filelist = [('file1', 1, 0), ('file2', 0, 1)]
+        self.assertEqual(
+            filelist[::-1],
+            DataCleaner._sort_filestat_list_by_time(filelist))
 
-        current_time = time.time()
+    def test__check_remove_time_True(self):
+        with mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            mock_time.return_value = 2
+            self.assertTrue(DataCleaner._check_remove_time(0, 1))
 
-        sub_folder_1_sizes = iter([500, 0, 0])
-        sub_folder_2_sizes = iter([2048-500, 0, 0])
+    def test__check_remove_time_False(self):
+        with mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            mock_time.return_value = 1
+            self.assertFalse(DataCleaner._check_remove_time(0, 1))
 
-        def current_size(folder):
-            """mock sub folder so that it shrinks to 0 bytes if
-                one folder is deleted"""
-            if folder == sub_folder_1:
-                return next(sub_folder_1_sizes)
-            if folder == sub_folder_2:
-                return next(sub_folder_2_sizes)
-            if folder == temp_folder:
-                return 1024*2
+    def test__remove_from_file_list_1(self):
+        filelist = []
+        DataCleaner._remove_from_file_list(filelist, [])
+        self.assertEqual([], filelist)
 
-        def creation_time(folder):
-            return int(current_time - 10) if folder == sub_folder_1 \
-                                          else int(current_time - 20)
+    def test__remove_from_file_list_2(self):
+        filelist = [0]
+        DataCleaner._remove_from_file_list(filelist, [0])
+        self.assertEqual([], filelist)
 
-        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size, \
-             mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
-                mocked_current_size.side_effect = current_size
-                mocked_creation_time.side_effect = creation_time
+    def test__remove_from_file_list_3(self):
+        filelist = [0, 1, 2, 3]
+        DataCleaner._remove_from_file_list(filelist, [0, 2])
+        self.assertEqual([1, 3], filelist)
 
-                # remove folders older than 1 day
-                # and remove old folders as long as total size exceed 1 MB
-                mock_cleaner = DataCleaner(temp_folder, 1024, 60 * 60 * 24)
+    def test__fnmatch_1(self):
+        self.assertFalse(DataCleaner._fnmatch('test.nii', []))
 
-                removed = mock_cleaner.clean_up(dry_run=True)
-                self.assertTrue(len(removed) == 1)
-                self.assertEqual(removed[0], sub_folder_2)
-                shutil.rmtree(temp_folder)
+    def test__fnmatch_2(self):
+        self.assertTrue(DataCleaner._fnmatch('test.nii', ['*.dcm', '*.nii']))
 
-    def test_dont_remove_if_negative_parameters(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_3')
-        _ = tempfile.mkdtemp(dir=temp_folder)
-        _ = tempfile.mkdtemp(dir=temp_folder)
-        # don't remove folders older than anything
+    def test__fnmatch_3(self):
+        self.assertFalse(DataCleaner._fnmatch('test.nii', ['*.dcm']))
 
-        def current_size(folder):
-            return 1024
+    def test__check_remove_filter(self):
+        self.assertFalse(DataCleaner._check_remove_filter(
+            'test.nii', [], []))
 
-        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size:
-            mocked_current_size.side_effect = current_size
-            mock_cleaner = DataCleaner(temp_folder, 1024 * 1024, -1)
+    def test__check_remove_filter2(self):
+        self.assertFalse(
+            DataCleaner._check_remove_filter('test.nii', ['*.dcm'], []))
 
-            removed = mock_cleaner.clean_up(dry_run=True)
-            self.assertTrue(removed == [])
+    def test__check_remove_filter3(self):
+        self.assertTrue(
+            DataCleaner._check_remove_filter('test.nii', [], ['*.nii']))
 
-            mock_cleaner = DataCleaner(temp_folder, -1, -1)
+    def test__check_remove_filter4(self):
+        self.assertFalse(DataCleaner._check_remove_filter(
+            'test.nii', None, None))
 
-            removed = mock_cleaner.clean_up(dry_run=True)
-            self.assertTrue(removed == [])
+    def test__check_remove_filter5(self):
+        """Both whitelist and blacklist"""
+        self.assertFalse(DataCleaner._check_remove_filter(
+            'test.nii', ['test.nii'], ['*.nii']))
 
-            shutil.rmtree(temp_folder)
+    def test__check_remove_filter6(self):
+        """Both whitelist and blacklist"""
+        self.assertTrue(DataCleaner._check_remove_filter(
+            'test.nii', ['not_test.nii'], ['*.nii']))
 
-    def test_early_termination(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_4')
-        sub_folder_1 = tempfile.mkdtemp(dir=temp_folder)
-        sub_folder_2 = tempfile.mkdtemp(dir=temp_folder)
-        sub_folder_3 = tempfile.mkdtemp(dir=temp_folder)
+    """Test public functions"""
 
-        current_time = time.time()
-        sub_folder_2_sizes = iter([200, 0, 0])
-        sub_folder_3_sizes = iter([1400, 0, 0])
+    def test_clean_file_folder(self):
+        filelist = [
+            ('folder1/file1.dcm', 0, 1),
+            ('folder2/file2.dcm', 0, 3),
+            ('folder1/file3.dcm', 0, 5),
+            ('folder1/file4.nii', 0, 7),
+            ('folder1/file5.dcm', 0, 9),
+        ]
+        removed, removed_index, removed_size = DataCleaner.clean_file_folder(
+            filelist, 'folder1/file1.dcm', [], ['*.dcm']
+        )
 
-        def current_size(folder):
-            # will raise a value error if sub_folder_1 is passed to function
-            if folder == sub_folder_2:
-                return next(sub_folder_2_sizes)
-            if folder == sub_folder_3:
-                return next(sub_folder_3_sizes)
-            if folder == sub_folder_1:
-                raise ValueError("Early termination failed")
-            if folder == temp_folder:
-                return 1024*2
+        self.assertEqual(
+            [
+                ('folder1/file3.dcm', 0, 5),
+                ('folder1/file5.dcm', 0, 9),
+            ], removed)
 
-        def creation_time(folder):
-            folder_time = {sub_folder_1: int(current_time - 10),
-                           sub_folder_2: int(current_time - 20),
-                           sub_folder_3: int(current_time - 30)}
-            return folder_time[folder]
+        self.assertEqual([2, 4], removed_index)
+        self.assertEqual(14, removed_size)
 
-        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size, \
-             mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time:
-                mocked_current_size.side_effect = current_size
-                mocked_creation_time.side_effect = creation_time
+    def test_clean_files_by_date_1(self):
+        self.assertEqual([], DataCleaner.clean_files_by_date([], 0, [], []))
 
-                # see if the clean_up function will query
-                # the size of sub_folder_1. if the function calls current_size
-                # with sub_folder_1, an error is raised
-                mock_cleaner = DataCleaner(temp_folder, 1024, -1)
-                try:
-                    removed = mock_cleaner.clean_up(dry_run=True)
-                except:
-                    self.fail("Early termination failed")
-                self.assertTrue(len(removed) == 1)
-                self.assertEqual(removed[0], sub_folder_3)
-                shutil.rmtree(temp_folder)
+    def test_clean_files_by_date_2(self):
+        with mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            mock_time.return_value = 10
+            filelist = [
+                ('file1', 0, 0),
+                ('file2', 3, 0),
+                ('file3', 5, 0),
+                ('file4', 7, 0)
+            ]
 
-    def test_both_whitelist_and_blacklist_instance(self):
-        temp_folder = '/mock/path'
-        filter_list = ['*.dcm']
-        with self.assertRaises(ValueError):
-            DataCleaner(temp_folder, -1, -1, whitelist=filter_list,
-                        blacklist=filter_list)
+            self.assertEqual(
+                [('file1', 0, 0),
+                 ('file2', 3, 0)],
+                DataCleaner.clean_files_by_date(filelist, 6, [], ['*file*'])
+            )
+            self.assertEqual(
+                [('file3', 5, 0),
+                 ('file4', 7, 0)],
+                filelist
+            )
 
-    def test_blacklist(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_6')
-        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=temp_folder)
-        _, tmp_file_2 = tempfile.mkstemp(suffix='.nii', dir=temp_folder)
-        filter_list = ['*.dcm']
+    def test_clean_files_by_date_blacklist(self):
+        with mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            mock_time.return_value = 10
+            filelist = [
+                ('file1', 0, 0),
+                ('file2', 3, 0),
+                ('file3', 5, 0),
+                ('file4', 7, 0)
+            ]
 
-        mock_cleaner = DataCleaner(temp_folder, -1, -1, blacklist=filter_list)
-        removed = mock_cleaner.clean_folder(temp_folder, dry_run=True)
-        self.assertTrue(len(removed) == 1)
-        self.assertEqual(removed[0], tmp_file_1)
-        shutil.rmtree(temp_folder)
+            self.assertEqual(
+                [('file1', 0, 0)],
+                DataCleaner.clean_files_by_date(filelist, 6, [], ['file1'])
+            )
+            self.assertEqual(
+                [('file2', 3, 0),
+                 ('file3', 5, 0),
+                 ('file4', 7, 0)],
+                filelist
+            )
 
-    def test_whitelist(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_7')
-        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=temp_folder)
-        _, tmp_file_2 = tempfile.mkstemp(suffix='.nii', dir=temp_folder)
-        filter_list = ['*.dcm']
+    def test_clean_files_by_date_whitelist(self):
+        with mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            mock_time.return_value = 10
+            filelist = [
+                ('file1', 0, 0),
+                ('file2', 3, 0),
+                ('file3', 5, 0),
+                ('file4', 7, 0)
+            ]
 
-        mock_cleaner = DataCleaner(temp_folder, -1, -1, whitelist=filter_list)
-        removed = mock_cleaner.clean_folder(temp_folder, dry_run=True)
-        self.assertTrue(len(removed) == 1)
-        self.assertEqual(removed[0], tmp_file_2)
-        shutil.rmtree(temp_folder)
+            self.assertEqual(
+                [('file2', 3, 0)],
+                DataCleaner.clean_files_by_date(filelist, 6, ['file1'], ['*file*'])
+            )
+            self.assertEqual(
+                [('file1', 0, 0),
+                 ('file3', 5, 0),
+                 ('file4', 7, 0)],
+                filelist
+            )
 
-    def test_remove_subdirectory_files_with_blacklist(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_8')
-        sub_folder_11 = tempfile.mkdtemp(suffix='subject1', dir=temp_folder)
-        sub_folder_21 = tempfile.mkdtemp(suffix='report', dir=sub_folder_11)
-        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=sub_folder_21)
-        _, tmp_file_2 = tempfile.mkstemp(suffix='.png', dir=sub_folder_21)
-        filter_list = ['*.dcm']
+    def test_clean_files_by_size_1(self):
+        self.assertEqual([], DataCleaner.clean_files_by_size([], 1, [], []))
 
-        mock_cleaner = DataCleaner(temp_folder, -1, -1, blacklist=filter_list)
-        removed = mock_cleaner.clean_folder(temp_folder, dry_run=True)
-        self.assertTrue(len(removed) == 1)
-        self.assertEqual(removed[0], tmp_file_1)
-        shutil.rmtree(temp_folder)
+    def test_clean_files_by_size_2(self):
+        filelist = [
+            ('file1', 0, 10),
+            ('file2', 0, 10),
+            ('file3', 0, 10),
+            ('file4', 0, 10)
+        ]
+        removed = DataCleaner.clean_files_by_size(filelist, 15, [], ['file*'])
+        self.assertEqual([('file1', 0, 10), ('file2', 0, 10)], removed)
+        self.assertEqual([('file3', 0, 10), ('file4', 0, 10)], filelist)
 
-    def test_remove_empty_folder_with_blacklist(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_9')
-        sub_folder_1 = tempfile.mkdtemp(suffix='dicom', dir=temp_folder)
-        _, tmp_file_1 = tempfile.mkstemp(suffix='.dcm', dir=sub_folder_1)
+    def test_clean_files_by_size_blacklist(self):
+        filelist = [
+            ('file1', 0, 10),
+            ('file2', 0, 10),
+            ('file3', 0, 10),
+            ('file4', 0, 10)
+        ]
+        removed = DataCleaner.clean_files_by_size(filelist, 15, [], ['file3'])
+        self.assertEqual([('file3', 0, 10)], removed)
+        self.assertEqual(
+            [('file1', 0, 10),
+             ('file2', 0, 10),
+             ('file4', 0, 10)],
+            filelist)
 
-        filter_list = ['*.dcm']
+    def test_clean_files_by_size_whitelist(self):
+        filelist = [
+            ('file1', 0, 10),
+            ('file2', 0, 10),
+            ('file3', 0, 10),
+            ('file4', 0, 10)
+        ]
+        removed = DataCleaner.clean_files_by_size(
+            filelist, 15, ['file1'], ['file*'])
+        self.assertEqual([('file2', 0, 10), ('file3', 0, 10)], removed)
+        self.assertEqual([('file1', 0, 10), ('file4', 0, 10)], filelist)
 
-        mock_cleaner = DataCleaner(temp_folder, -1, -1, blacklist=filter_list)
-        mock_cleaner.clean_folder(temp_folder, dry_run=False)
-        self.assertFalse(os.path.isdir(sub_folder_1))
-        self.assertFalse(os.path.isdir(temp_folder))
-        if os.path.isdir(temp_folder):
-            shutil.rmtree(temp_folder)
+    def test_remove_files_file_nonexistent(self):
+        fail_list = DataCleaner.remove_files(
+            [('mockpath/that/does/not/exist', 0, 0)])
+        self.assertEqual(['mockpath/that/does/not/exist'], fail_list)
 
-    def test_partially_remove(self):
-        """
-        Test removing the correct folders when partially
-        removing files using a filter.
-        """
-        temp_folder = tempfile.mkdtemp(suffix='_test_10')
-        sub_folder_1 = tempfile.mkdtemp(dir=temp_folder)
-        sub_folder_2 = tempfile.mkdtemp(dir=temp_folder)
-
-        current_time = time.time()
-
-        sub_folder_1_sizes = iter([500, 0, 0])
-        sub_folder_2_sizes = iter([2048-500, 1100, 0])
-
-        def current_size(folder):
-            if folder == sub_folder_1:
-                return next(sub_folder_1_sizes)
-            if folder == sub_folder_2:
-                return next(sub_folder_2_sizes)
-            if folder == temp_folder:
-                return 1024*2
-
-        def creation_time(folder):
-            folder_time = {sub_folder_1: int(current_time - 10),
-                           sub_folder_2: int(current_time - 20)}
-            return folder_time[folder]
-
-        with mock.patch.object(DataCleaner, 'current_size') as mocked_current_size, \
-             mock.patch.object(DataCleaner, 'creation_time') as mocked_creation_time, \
-             mock.patch.object(DataCleaner, 'clean_folder') as mocked_clean_folder:
-                mocked_current_size.side_effect = current_size
-                mocked_creation_time.side_effect = creation_time
-                mocked_clean_folder.side_effect = lambda x, y: None
-
-                # remove with a max size of 1MB.
-                # If not using a filterlist, only sub_folder_2 will be deleted.
-                # If using a filterlist, both folders will be cleaned.
-                mock_cleaner = DataCleaner(temp_folder, 1024, -1,
-                                           whitelist=["mock"])
-                removed = mock_cleaner.clean_up(dry_run=True)
-
-                self.assertTrue(len(removed) == 2)
-                self.assertEqual(removed[0], sub_folder_2)
-                self.assertEqual(removed[1], sub_folder_1)
-                shutil.rmtree(temp_folder)
-
-    def test_current_size(self):
-        """Test current size returns 0 on non existent folder"""
-        temp_folder = "/this_is_mock_path/"
-        self.assertTrue(DataCleaner.current_size(temp_folder) == 0)
-
-    @mock.patch('argparse.ArgumentParser.parse_args',
-                return_value=argparse.
-                Namespace(folder="/this_is_mock_path/",
-                          max_folder_size=-1, max_data_seconds=-1,
-                          blacklist=None, whitelist=None,
-                          loglevel=logging.WARNING, dry_run=True))
-    def test_main(self, mock_args):
+    def test_remove_empty_folder_from_base_folder_1(self):
         try:
-            main()
-        except:
-            self.fail("Main function of data_cleaner failed")
+            base_folder = tempfile.mkdtemp()
+            removed = DataCleaner.remove_empty_folder_from_base_folder(base_folder)
+            self.assertEqual([], removed)
+        finally:
+            shutil.rmtree(base_folder)
+
+    def test_remove_empty_folder_from_base_folder_2(self):
+        try:
+            base_folder = tempfile.mkdtemp()
+            tmp1 = tempfile.mkdtemp(dir=base_folder)
+            tmp2 = tempfile.mkdtemp(dir=base_folder)
+            tmp3 = tempfile.mkdtemp(dir=tmp1)
+            tempfile.mkstemp(dir=tmp2)
+            removed = DataCleaner.remove_empty_folder_from_base_folder(base_folder)
+            self.assertEqual([tmp3, tmp1], removed)
+        finally:
+            shutil.rmtree(base_folder)
+
+    def test_clean_up_priority_list(self):
+        with mock.patch.object(DataCleaner, 'scan_dir'), \
+                mock.patch.object(DataCleaner, '_get_file_stats') as mock_files, \
+                mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            mock_files.return_value = [
+                ('file1', 15, 30),
+                ('file2', 5, 10),
+                ('file3', 11, 30),
+                ('file4', 13, 30)
+            ]
+            mock_time.return_value = 20
+            dc_instance = DataCleaner(
+                folder='',
+                max_folder_size=1.0*50/1024/1028,
+                max_data_seconds=10,
+                whitelist=['file1', 'file3'],
+                priority_list=['file2', 'file4', 'file*']
+            )
+            removed = dc_instance.clean_up(dry_run=True)
+            self.assertEqual(
+                [('file2', 5, 10),
+                 ('file4', 13, 30)],
+                removed
+            )
+
+    def test_clean_up_priority_list_2(self):
+        with mock.patch.object(DataCleaner, 'scan_dir'), \
+                mock.patch.object(DataCleaner, '_get_file_stats') as mock_files, \
+                mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            # test that 1. files not in priority_list are not removed
+            #    (t.db not removed)
+            # 2. files removed are in the order of the priority list
+            #    (old*.nii removed first)
+            # 3. files on the whitelist are not removed
+            #    (not removing file1.nii and file3.nii)
+            # 4. stop the removing process early if size requirements met
+            #    (0004.dcm not removed)
+            mock_files.return_value = [
+                ('folder1/0001.png', 0, 10),
+                ('folder1/0002.png', 0, 10),
+                ('folder1/0003.png', 0, 10),
+                ('folder1/0004.png', 0, 10),
+                ('folder1/folder2/file1.nii', 10, 30),
+                ('folder1/folder2/old_file2.nii', 10, 30),
+                ('folder1/folder2/old_file3.nii', 10, 30),
+                ('folder1/folder2/file4.nii', 10, 30),
+                ('folder2/t.db', 10, 40),
+
+            ]
+            mock_time.return_value = 20
+            dc_instance = DataCleaner(
+                folder='',
+                max_folder_size=1.0*115/1024/1024,
+                max_data_seconds=-1,
+                whitelist=['*file1.nii', '*file3.nii'],
+                priority_list=['*old*.nii', '*nii', '*.png', 'file*']
+            )
+            removed = dc_instance.clean_up(dry_run=True)
+            self.assertEqual(
+                [('folder1/folder2/old_file2.nii', 10, 30),
+                 ('folder1/folder2/file4.nii', 10, 30),
+                 ('folder1/0001.png', 0, 10),
+                 ('folder1/0002.png', 0, 10),
+                 ('folder1/0003.png', 0, 10)],
+                removed
+            )
+
+    def test_clean_up_priority_list_3_dcms(self):
+        with mock.patch.object(DataCleaner, 'scan_dir'), \
+                mock.patch.object(DataCleaner, '_get_file_stats') as mock_files, \
+                mock.patch.object(DataCleaner, '_get_current_time') as mock_time:
+            # test that 1. dcm files are removed on a whole
+            mock_files.return_value = [
+                ('folder1/0001.dcm', 0, 10),
+                ('folder1/0002.dcm', 0, 10),
+                ('folder1/0003.dcm', 0, 10),
+                ('folder1/0004.dcm', 0, 10),
+                ('folder2/0001.dcm', 10, 10),
+                ('folder2/0002.dcm', 10, 10),
+                ('folder2/folder3/file1.nii', 10, 10),
+                ('folder3/0001.dcm', 5, 10),
+                ('folder3/0002.dcm', 5, 10),
+                ('folder3/t.db', 10, 10),
+
+            ]
+            mock_time.return_value = 20
+            dc_instance = DataCleaner(
+                folder='',
+                max_folder_size=1.0*55/1024/1024,
+                max_data_seconds=-1,
+                whitelist=[],
+                priority_list=['*.dcm']
+            )
+            removed = dc_instance.clean_up(dry_run=True)
+            self.assertEqual(
+                [('folder1/0001.dcm', 0, 10),
+                 ('folder1/0002.dcm', 0, 10),
+                 ('folder1/0003.dcm', 0, 10),
+                 ('folder1/0004.dcm', 0, 10),
+                 ('folder3/0001.dcm', 5, 10),
+                 ('folder3/0002.dcm', 5, 10)],
+                removed
+            )
