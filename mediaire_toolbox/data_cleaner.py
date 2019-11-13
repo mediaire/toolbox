@@ -366,9 +366,12 @@ class DataCleaner:
         print('{}, {}'.format(filelist, self.min_data_seconds))
         remove_list = []
         if self.max_data_seconds > 0:
+            # there is no priority for too old files, thus files in either
+            # blacklist or prioritylist should be deleted
+            date_blacklist = blacklist + self.priority_list
             remove_list += self.clean_files_by_date(
                 filelist, self.max_data_seconds,
-                whitelist, blacklist
+                whitelist, date_blacklist
             )
 
         if self.max_folder_size_bytes > 0:
