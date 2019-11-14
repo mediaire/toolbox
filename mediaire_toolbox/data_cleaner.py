@@ -34,7 +34,8 @@ class DataCleaner:
     """
 
     def __init__(self, folder, max_folder_size, max_data_seconds,
-                 whitelist=None, blacklist=None, priority_list=None):
+                 min_data_seconds=-1, whitelist=None, blacklist=None, 
+                 priority_list=None):
         """
         Parameters
         ----------
@@ -48,6 +49,9 @@ class DataCleaner:
         max_data_seconds: int
             Max data age, delete folders that are older than this many seconds.
             -1 if not deleting files based on age.
+        min_data_seconds: int
+            minimum allowed age below which no file can be deleted.
+            -1 if it doesn't apply.
         whitelist: list
             Whitelist for files. List of Unix like filename pattern strings.
         blacklist: list
@@ -65,7 +69,11 @@ class DataCleaner:
         self.base_folder = folder
         self.max_folder_size = max_folder_size
         self.max_folder_size_bytes = 1.0 * max_folder_size * 1024 * 1024
+        if min_data_seconds > 0 and max_data_seconds > 0:
+            if min_data_seconds > max_data_seconds:
+                raise ValueError("min_data_seconds can't be > max_data_seconds")
         self.max_data_seconds = max_data_seconds
+        self.min_data_seconds = min_data_seconds
         self.whitelist = whitelist if whitelist else []
         self.blacklist = blacklist if blacklist else []
         default_logger.info(("Instantiated a DataCleaner on folder {%s} "
@@ -111,6 +119,13 @@ class DataCleaner:
         by time, ascending"""
         return sorted(filestat_list, key=lambda x: x[1])
 
+    def _filter_too_young_files(self, filestat_list):
+        """Remove candidates from the (filename, creation_time, filesize)
+        which are too young to be deleted"""
+        return filter(lambda x: not self._check_too_young(x[1], 
+                                                          self.min_data_seconds),
+                      filestat_list)
+        
     @staticmethod
     def _sum_filestat_list(filestat_list):
         """Get the total file size of a list of filestats"""
@@ -127,6 +142,12 @@ class DataCleaner:
             if fnmatch.fnmatch(file, pattern):
                 return True
         return False
+
+    @staticmethod
+    def _check_too_young(c_time, min_data_seconds):
+        """Returns true if the file can't be removed because it's too young"""
+        age = DataCleaner._get_current_time() - c_time
+        return age < min_data_seconds
 
     @staticmethod
     def _check_remove_time(c_time, max_data_seconds):
@@ -339,11 +360,16 @@ class DataCleaner:
         blacklist = blacklist + self.blacklist if blacklist else self.blacklist
         filelist = self.scan_dir(self.base_folder)
         filelist = self._get_file_stats(filelist)
+        filelist = self._filter_too_young_files(filelist)
         filelist = self._sort_filestat_list_by_time(filelist)
         remove_list = []
         if self.max_data_seconds > 0:
+            # there is no priority for too old files, thus files in either
+            # blacklist or prioritylist should be deleted
+            date_blacklist = blacklist + self.priority_list
             remove_list += self.clean_files_by_date(
-                filelist, self.max_data_seconds, whitelist, blacklist
+                filelist, self.max_data_seconds,
+                whitelist, date_blacklist
             )
 
         if self.max_folder_size_bytes > 0:
