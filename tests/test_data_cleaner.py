@@ -4,7 +4,7 @@ import tempfile
 import mock
 import shutil
 
-from mediaire_toolbox.data_cleaner import DataCleaner, main
+from mediaire_toolbox.data_cleaner import DataCleaner
 
 logging.basicConfig(format='%(asctime)s %(levelname)s  %(module)s:%(lineno)s '
                     '%(message)s', level=logging.DEBUG)

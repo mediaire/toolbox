@@ -147,7 +147,6 @@ class DataCleaner:
     def _check_too_young(c_time, min_data_seconds):
         """Returns true if the file can't be removed because it's too young"""
         age = DataCleaner._get_current_time() - c_time
-        print('Age: {}, min data seconds: {}'.format(age, min_data_seconds))
         return age < min_data_seconds
 
     @staticmethod
@@ -363,7 +362,6 @@ class DataCleaner:
         filelist = self._get_file_stats(filelist)
         filelist = self._filter_too_young_files(filelist)
         filelist = self._sort_filestat_list_by_time(filelist)
-        print('{}, {}'.format(filelist, self.min_data_seconds))
         remove_list = []
         if self.max_data_seconds > 0:
             # there is no priority for too old files, thus files in either
