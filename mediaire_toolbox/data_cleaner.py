@@ -399,7 +399,8 @@ class DataCleaner:
             self._log_debug_removed(remove_list)
         else:
             self.remove_files(remove_list)
-            self.remove_empty_folder_from_base_folder(self.base_folder)
+            # TODO add back remove empty folders
+            # when concurrency issue solved
         return remove_list
 
 
