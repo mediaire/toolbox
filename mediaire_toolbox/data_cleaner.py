@@ -171,7 +171,13 @@ class DataCleaner:
     @staticmethod
     def _remove_from_file_list(filelist, removed_index_list):
         """Remove the indexes of a inplace list given the
-        list of indexes. NOTE function with side-effects"""
+        list of indexes. NOTE function with side-effects
+
+        Parameters
+        ----------
+        removed_index_list:
+            sorted list of indexes to be removed
+        """
         shift_counter = 0
         for i in removed_index_list:
             default_logger.info(f"removing index {i} from len {len(filelist)}")
@@ -198,10 +204,12 @@ class DataCleaner:
         removed = []
         removed_index = []
         removed_size = 0
+        default_logger.info(f"Clean folder {folder}")
         for i in range(len(filelist)):
             f, _, size = filelist[i]
             if DataCleaner._fnmatch(f, [folder + '*']) and f != file:
                 if DataCleaner._check_remove_filter(f, whitelist, blacklist):
+                    default_logger.info(f"remove index {i}")
                     removed.append(filelist[i])
                     removed_index.append(i)
                     removed_size += size
@@ -240,6 +248,7 @@ class DataCleaner:
                 removed.append(filelist[i])
                 removed_index_list.append(i)
                 if clean_folder:
+                    default_logger.info(f"cleaning index {i}")
                     c_removed, c_removed_index, _ = DataCleaner.clean_file_folder(
                         filelist, file, whitelist, blacklist)
                     removed += c_removed
