@@ -177,7 +177,6 @@ class DataCleaner:
         sorted_remove_index = sorted(list(set(removed_index_list)))
         shift_counter = 0
         for i in sorted_remove_index:
-            default_logger.info(f"removing index {i} from len {len(filelist)}")
             del filelist[i-shift_counter]
             shift_counter += 1
 
@@ -201,12 +200,10 @@ class DataCleaner:
         removed = []
         removed_index = []
         removed_size = 0
-        default_logger.info(f"Clean folder {folder}")
         for i in range(len(filelist)):
             f, _, size = filelist[i]
             if DataCleaner._fnmatch(f, [folder + '*']) and f != file:
                 if DataCleaner._check_remove_filter(f, whitelist, blacklist):
-                    default_logger.info(f"remove index {i}")
                     removed.append(filelist[i])
                     removed_index.append(i)
                     removed_size += size
@@ -282,13 +279,11 @@ class DataCleaner:
             file, _, size = filelist[i]
             if i in removed_index_list:
                 continue
-            default_logger.info(f"Handling index {i}")
             if DataCleaner._check_remove_filter(file, whitelist, blacklist):
                 removed.append(filelist[i])
                 removed_index_list.append(i)
                 remove_size_counter += size
                 if clean_folder:
-                    default_logger.info(f"cleaning index {i}")
                     c_removed, c_removed_index, c_removed_size = (
                         DataCleaner.clean_file_folder(
                             filelist, file, whitelist, blacklist))
@@ -297,8 +292,6 @@ class DataCleaner:
                     remove_size_counter += c_removed_size
             if remove_size_counter > reduce_size:
                 break
-        # default_logger.info(f"removed_index_list: {removed_index_list}")
-        default_logger.info(f"filelist: {filelist}")
         DataCleaner._remove_from_file_list(filelist, removed_index_list)
         return removed
 
