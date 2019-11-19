@@ -174,6 +174,7 @@ class DataCleaner:
         list of indexes. NOTE function with side-effects"""
         shift_counter = 0
         for i in removed_index_list:
+            default_logger.info(f"removing index {i} from len {len(filelist)}")
             del filelist[i-shift_counter]
             shift_counter += 1
 
