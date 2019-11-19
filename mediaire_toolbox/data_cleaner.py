@@ -289,6 +289,8 @@ class DataCleaner:
                     remove_size_counter += c_removed_size
             if remove_size_counter > reduce_size:
                 break
+        default_logger.info(f"removed_index_list: {removed_index_list}")
+        default_logger.info(f"filelist: {filelist}")
         DataCleaner._remove_from_file_list(filelist, removed_index_list)
         return removed
 
