@@ -171,9 +171,12 @@ class DataCleaner:
     @staticmethod
     def _remove_from_file_list(filelist, removed_index_list):
         """Remove the indexes of a inplace list given the
-        list of indexes. NOTE function with side-effects"""
+        list of indexes. NOTE function with side-effects
+        """
+        # remove duplicates and sort, ascending
+        sorted_remove_index = sorted(list(set(removed_index_list)))
         shift_counter = 0
-        for i in removed_index_list:
+        for i in sorted_remove_index:
             del filelist[i-shift_counter]
             shift_counter += 1
 
