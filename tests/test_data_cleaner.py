@@ -82,6 +82,11 @@ class TestDataCleaner(unittest.TestCase):
         DataCleaner._remove_from_file_list(filelist, [0, 2])
         self.assertEqual([1, 3], filelist)
 
+    def test__remove_from_file_list_4(self):
+        filelist = [0, 1, 2, 3, 4, 5, 6]
+        DataCleaner._remove_from_file_list(filelist, [0, 0, 4, 2, 5, 1])
+        self.assertEqual([3, 6], filelist)
+
     def test__fnmatch_1(self):
         self.assertFalse(DataCleaner._fnmatch('test.nii', []))
 
