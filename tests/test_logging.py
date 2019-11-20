@@ -1,9 +1,11 @@
 import unittest
+from unittest.mock import patch
 import logging
 import io
 from contextlib import redirect_stderr
 
 from mediaire_toolbox.logging import base_logging_conf
+from mediaire_toolbox.queue.tasks import Task
 
 
 class TestLogging(unittest.TestCase):
@@ -34,3 +36,38 @@ class TestLogging(unittest.TestCase):
         self.assertTrue('transaction=1' in lines[1])
         self.assertTrue('transaction=1' in lines[2])
         self.assertFalse('transaction=1' in lines[3])
+
+    @patch('time.time')
+    def test_log_runtime(self, mock_time):
+        mock_time.return_value = 10
+
+        @base_logging_conf.log_task_runtime
+        def process_task(task):
+            pass
+
+        task = Task(t_id=1, tag='stage_1', data={})
+        process_task(task)
+
+        task.tag = 'stage_2'
+        process_task(task)
+
+        self.assertEqual(
+            [['stage_1', 0], ['stage_2', 0]],
+            task.data['runtime']
+        )
+
+    @patch('time.time')
+    def test_log_runtime_raise_error(self, mock_time):
+        @base_logging_conf.log_task_runtime
+        def process_task(task):
+            pass
+
+        class NotTask:
+            def __init__(self):
+                self.tag = '1'
+                self.t_id = 1
+                self.data = {}
+
+        self.assertRaises(
+            TypeError, process_task, NotTask()
+        )
