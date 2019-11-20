@@ -54,8 +54,14 @@ def logger_for_transaction(name: str, t_id: int):
 def log_task_runtime(f):
     """Function decorator for logging and recording
     the runtime of a task in a component.
+    NOTE function with side effects; the runtime is logged
+    to the task.data dict
     NOTE this decorator should be decorating a plain
-    process_task function, not the process_task method of QueueDaemon
+    process_task function, that takes an task object as the first
+    arguement. The task object should be sent to the result queue after
+    the call to the decorated function, thus
+    this decorator is not meant to decorate
+    the process_task method of QueueDaemon
 
     Usage:
     @log_task_runtime
@@ -64,7 +70,7 @@ def log_task_runtime(f):
     """
     def wrapper(task, *args, **kwargs):
         start_time = time.time()
-        f(task, *args, **kwargs)
+        result = f(task, *args, **kwargs)
         end_time = time.time()
         runtime = round(end_time - start_time, 4)
 
@@ -76,5 +82,5 @@ def log_task_runtime(f):
             task.data['runtime'].append((task.tag, runtime))
         else:
             task.data['runtime'] = [(task.tag, runtime)]
-        return f
+        return result
     return wrapper
