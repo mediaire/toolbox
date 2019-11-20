@@ -55,3 +55,19 @@ class TestLogging(unittest.TestCase):
             [['stage_1', 0], ['stage_2', 0]],
             task.data['runtime']
         )
+
+    @patch('time.time')
+    def test_log_runtime_raise_error(self, mock_time):
+        @base_logging_conf.log_task_runtime
+        def process_task(task):
+            pass
+
+        class NotTask:
+            def __init__(self):
+                self.tag = '1'
+                self.t_id = 1
+                self.data = {}
+
+        self.assertRaises(
+            TypeError, process_task, NotTask()
+        )

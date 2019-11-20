@@ -2,6 +2,8 @@ import os
 import logging
 import time
 
+from mediaire_toolbox.queue.tasks import Task
+
 """
 Provide a common interface for all our components to do logging
 """
@@ -68,7 +70,12 @@ def log_task_runtime(f):
     def process_task(task):
         ...
     """
-    def wrapper(task, *args, **kwargs):
+    def wrapper(task: Task, *args, **kwargs):
+        if not isinstance(task, Task):
+            raise TypeError(
+                "First arguement of the decorated"
+                "function must be a task object!")
+
         start_time = time.time()
         result = f(task, *args, **kwargs)
         end_time = time.time()
