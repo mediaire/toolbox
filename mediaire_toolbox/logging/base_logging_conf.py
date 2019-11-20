@@ -79,8 +79,8 @@ def log_task_runtime(f):
         logger_transaction.info(
             "Finished in {} seconds.".format(runtime))
         if task.data.get('runtime', []):
-            task.data['runtime'].append((task.tag, runtime))
+            task.data['runtime'].append([task.tag, runtime])
         else:
-            task.data['runtime'] = [(task.tag, runtime)]
+            task.data['runtime'] = [[task.tag, runtime]]
         return result
     return wrapper

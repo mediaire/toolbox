@@ -52,6 +52,6 @@ class TestLogging(unittest.TestCase):
         process_task(task)
 
         self.assertEqual(
-            [('stage_1', 0), ('stage_2', 0)],
+            [['stage_1', 0], ['stage_2', 0]],
             task.data['runtime']
         )
