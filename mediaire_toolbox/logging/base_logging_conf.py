@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 
 """
 Provide a common interface for all our components to do logging
@@ -48,3 +49,32 @@ def logger_for_transaction(name: str, t_id: int):
             '%(module)s:%(lineno)s %(message)s'))
 
     return logger
+
+
+def log_task_runtime(f):
+    """Function decorator for logging and recording
+    the runtime of a task in a component.
+    NOTE this decorator should be decorating a plain
+    process_task function, not the process_task method of QueueDaemon
+
+    Usage:
+    @log_task_runtime
+    def process_task(task):
+        ...
+    """
+    def wrapper(task, *args, **kwargs):
+        start_time = time.time()
+        f(task, *args, **kwargs)
+        end_time = time.time()
+        runtime = round(end_time - start_time, 4)
+
+        logger_transaction = logger_for_transaction(
+            'runtime_logger', task.t_id)
+        logger_transaction.info(
+            "Finished in {} seconds.".format(runtime))
+        if task.data.get('runtime', []):
+            task.data['runtime'].append((task.tag, runtime))
+        else:
+            task.data['runtime'] = [(task.tag, runtime)]
+        return f
+    return wrapper

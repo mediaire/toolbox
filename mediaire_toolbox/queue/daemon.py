@@ -1,5 +1,6 @@
 import logging
 import traceback
+import time
 
 from abc import ABC, abstractmethod
 
@@ -45,6 +46,14 @@ class QueueDaemon(ABC):
         self.daemon_name = daemon_name
         self.config = config
         self.stopped = False
+
+    def profiler(self, f):
+        start_time = time.time()
+        def wrapper(*args, **kwargs):
+            result = f(*args, **kwargs)
+        end_time = time.time()
+
+
 
     @abstractmethod
     def process_task(self, task):
