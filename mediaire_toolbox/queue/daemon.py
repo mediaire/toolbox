@@ -47,14 +47,6 @@ class QueueDaemon(ABC):
         self.config = config
         self.stopped = False
 
-    def profiler(self, f):
-        start_time = time.time()
-        def wrapper(*args, **kwargs):
-            result = f(*args, **kwargs)
-        end_time = time.time()
-
-
-
     @abstractmethod
     def process_task(self, task):
         """
