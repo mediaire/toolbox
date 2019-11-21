@@ -13,6 +13,7 @@ setup(
     install_requires=[
         'nose',
         'redis',
-	    'SQLAlchemy'
+        'SQLAlchemy',
+        'passlib'
     ]
 )
