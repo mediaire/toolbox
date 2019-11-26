@@ -58,7 +58,7 @@ function build_release (){
         --cache-from ${1}:release \
 		--target release \
 		-t ${1}:release \
-        -t ${1}:${2} \
+        -t ${2}:${3} \
 	    -f Dockerfile .
 }
 
@@ -105,7 +105,7 @@ if [ "${TARGET}" == "release" ]; then
     build_runenv ${CI_IMAGE_BASE_NAME}
     build_dev ${CI_IMAGE_BASE_NAME} ${IMAGE_GIT_TAG}
     build_builder ${CI_IMAGE_BASE_NAME}
-    build_release ${CI_IMAGE_BASE_NAME} ${IMAGE_GIT_TAG}
+    build_release ${CI_IMAGE_BASE_NAME} ${IMAGE_BASE_NAME} ${IMAGE_GIT_TAG}
 
     # update cache
     docker push ${CI_IMAGE_BASE_NAME}:builder
