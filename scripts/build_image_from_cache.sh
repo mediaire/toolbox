@@ -47,6 +47,7 @@ function build_release_test (){
         --cache-from ${1}:builder \
 		--target release_test \
 		-t ${1}:release_test \
+        -t ${1}:${2}-release_test
 	    -f Dockerfile .
 }
 
@@ -87,7 +88,7 @@ if [ "${TARGET}" == "release_test" ]; then
     build_runenv ${CI_IMAGE_BASE_NAME}
     build_dev ${CI_IMAGE_BASE_NAME} ${IMAGE_GIT_TAG}
     build_builder ${CI_IMAGE_BASE_NAME}
-    build_release_test ${CI_IMAGE_BASE_NAME}
+    build_release_test ${CI_IMAGE_BASE_NAME} ${IMAGE_GIT_TAG}
 
     # update cache
     docker push ${CI_IMAGE_BASE_NAME}:builder
