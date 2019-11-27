@@ -47,7 +47,7 @@ function build_release_test (){
         --cache-from ${1}:builder \
 		--target release_test \
 		-t ${1}:release_test \
-        -t ${1}:${2}-release_test
+        -t ${1}:${2}-release_test \
 	    -f Dockerfile .
 }
 
