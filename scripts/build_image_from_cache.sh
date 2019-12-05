@@ -62,7 +62,7 @@ function build_single (){
     else
         tag_string=${CI_IMAGE_BASE_NAME}:${IMAGE_GIT_TAG}-${target}
     fi
-
+    echo "cache $cache_string"
     docker build ${cache_string} \
         --target ${target} \
         ${BUILD_ARGS} \
@@ -72,12 +72,12 @@ function build_single (){
 }
 
 function build (){
-    target=${1}
+    parent_target=${1}
     for i in "${targets[@]}"
     do
         echo "building ${i}"
         build_single ${i}
-        if [ "${i}" == "${target}" ]; then
+        if [ "${i}" == "${parent_target}" ]; then
             break
         fi
     done
