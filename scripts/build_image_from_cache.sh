@@ -76,7 +76,7 @@ function build (){
     for i in "${targets[@]}"
     do
         echo "building ${i}"
-        build_single ${target}
+        build_single ${i}
         if [ "${i}" == "${target}" ]; then
             break
         fi
