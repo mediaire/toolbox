@@ -86,7 +86,9 @@ class DataCleaner:
 
     def _check_valid_init(self):
         if not self.blacklist and not self.priority_list:
-            raise ValueError("Need at least black list of priority list to delete")
+            default_logger.warn(
+                "No black list and priority list specified. "
+                "Datacleaner will not clean anything.")
 
     @staticmethod
     def scan_dir(path):
@@ -208,7 +210,6 @@ class DataCleaner:
                     removed_index.append(i)
                     removed_size += size
         return removed, removed_index, removed_size
-
 
     @staticmethod
     def clean_files_by_date(filelist, max_data_seconds,
@@ -361,6 +362,10 @@ class DataCleaner:
         """
         whitelist = whitelist + self.whitelist if whitelist else self.whitelist
         blacklist = blacklist + self.blacklist if blacklist else self.blacklist
+        if self.max_data_seconds < 0 and self.max_folder_size_bytes < 0:
+            default_logger.info(
+                "No age or size limit specified. Skipping clean up.")
+            return
         filelist = self.scan_dir(self.base_folder)
         filelist = self._get_file_stats(filelist)
         filelist = self._filter_too_young_files(filelist)
