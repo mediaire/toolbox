@@ -47,7 +47,7 @@ function push (){
     done
 }
 
-function build (){
+function build_single (){
     target=${1}
     cache_string=''
     for i in "${targets[@]}"
@@ -69,6 +69,18 @@ function build (){
         -t ${CI_IMAGE_BASE_NAME}:${target} \
         -t ${tag_string} \
         -f Dockerfile .
+}
+
+function build (){
+    target=${1}
+    for i in "${targets[@]}"
+    do
+        echo "building ${i}"
+        build_single ${target}
+        if [ "${i}" == "${target}" ]; then
+            break
+        fi
+    done
 }
 
 pull ${TARGET}
