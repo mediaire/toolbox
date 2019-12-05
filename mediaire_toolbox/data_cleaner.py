@@ -106,7 +106,11 @@ class DataCleaner:
     @staticmethod
     def _creation_time_and_size(file):
         """Returns a (filename, creation_time, filesize) tuple"""
-        stat = os.stat(file)
+        try:
+            stat = os.stat(file)
+        except Exception:
+            default_logger.warn(
+                "Failed to get stat of {}".format(file))
         return file, stat.st_ctime, stat.st_size
 
     @staticmethod
