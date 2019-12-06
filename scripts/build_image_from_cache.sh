@@ -57,7 +57,7 @@ function build_single (){
             break
         fi
     done
-    if [[ "${target}" == "releaes" ]]; then
+    if [[ "${target}" == "release" ]]; then
         tag_string=${IMAGE_BASE_NAME}:${IMAGE_GIT_TAG}
     else
         tag_string=${CI_IMAGE_BASE_NAME}:${IMAGE_GIT_TAG}-${target}
