@@ -33,8 +33,9 @@ class DataCleaner:
         list in the priority list are deleted, then the second ...
     """
 
-    def __init__(self, folder, max_folder_size, max_data_seconds,
-                 min_data_seconds=-1, whitelist=None, blacklist=None, 
+    def __init__(self, folder: str, folder_size_soft_limit: int,
+                 folder_size_hard_limit: int, max_data_seconds: int,
+                 min_data_seconds: int=-1, whitelist=None, blacklist=None,
                  priority_list=None):
         """
         Parameters
@@ -42,9 +43,13 @@ class DataCleaner:
         folder:
             folder: str
             Path of folder to be cleaned.
-        max_folder_size: int
-            Max folder size (in MB), delete until current size is smaller than
-            this.
+        folder_size_soft_limit: int
+            Data cleaner folder size soft limit. Reduce the folder size to the
+            soft limit if the hard limit is reached. The soft limit must be
+            lower than the hard limit
+        folder_size_hard_limit: int
+            Data cleaner folder size hard limit. Delete files in the folder if
+            hard limit is reached.
             -1 if not deleting files based on size.
         max_data_seconds: int
             Max data age, delete folders that are older than this many seconds.
@@ -67,8 +72,14 @@ class DataCleaner:
             files matching pattern_C.
         """
         self.base_folder = folder
-        self.max_folder_size = max_folder_size
-        self.max_folder_size_bytes = 1.0 * max_folder_size * 1024 * 1024
+        if folder_size_soft_limit > folder_size_hard_limit:
+            raise ValueError(
+                "max_folder_size_soft_limit can't be > "
+                "max_folder_size_hard_limit")
+        self.soft_limit = folder_size_soft_limit
+        self.hard_limit = folder_size_hard_limit
+        self.soft_limit_bytes = 1.0 * self.soft_limit * 1024 * 1024
+        self.hard_limit_bytes = 1.0 * self.hard_limit * 1024 * 1024
         if min_data_seconds > 0 and max_data_seconds > 0:
             if min_data_seconds > max_data_seconds:
                 raise ValueError("min_data_seconds can't be > max_data_seconds")
@@ -76,10 +87,11 @@ class DataCleaner:
         self.min_data_seconds = min_data_seconds
         self.whitelist = whitelist if whitelist else []
         self.blacklist = blacklist if blacklist else []
-        default_logger.info(("Instantiated a DataCleaner on folder {%s} "
-                            "with max foldersize={%s} and max data seconds={%s}")
-                             %
-                            (folder, max_folder_size, max_data_seconds))
+        default_logger.info(
+            ("Instantiated a DataCleaner on folder {%s} "
+             "with max foldersize soft limit={%s}mb, "
+             "max foldersize hard limit={%s}mb and max data seconds={%s}")
+             %(folder, self.soft_limit, self.hard_limit, max_data_seconds))
 
         self.priority_list = priority_list if priority_list else []
         self._check_valid_init()
@@ -366,7 +378,7 @@ class DataCleaner:
         """
         whitelist = whitelist + self.whitelist if whitelist else self.whitelist
         blacklist = blacklist + self.blacklist if blacklist else self.blacklist
-        if self.max_data_seconds < 0 and self.max_folder_size_bytes < 0:
+        if self.max_data_seconds < 0 and self.hard_limit_bytes < 0:
             default_logger.info(
                 "No age or size limit specified. Skipping clean up.")
             return
@@ -384,29 +396,30 @@ class DataCleaner:
                 whitelist, date_blacklist
             )
 
-        if self.max_folder_size_bytes > 0:
+        if self.hard_limit_bytes > 0:
             current_size = self._sum_filestat_list(filelist)
-            reduce_size = current_size - self.max_folder_size_bytes
-            if not self.priority_list:
-                # first delete based on whitelist/blacklist
-                removed = self.clean_files_by_size(
-                    filelist, reduce_size, whitelist=whitelist,
-                    blacklist=blacklist)
-                reduce_size -= self._sum_filestat_list(removed)
-                remove_list += removed
-            else:
-                # remove files based on priority list
-                for pattern in self.priority_list:
-                    if pattern == '*.dcm' or pattern == '*dcm':
-                        clean_folder = True
-                    else:
-                        clean_folder = False
+            if current_size > self.hard_limit_bytes:
+                reduce_size = current_size - self.soft_limit_bytes
+                if not self.priority_list:
+                    # first delete based on whitelist/blacklist
                     removed = self.clean_files_by_size(
-                        filelist, reduce_size,
-                        whitelist=whitelist, blacklist=[pattern],
-                        clean_folder=clean_folder)
+                        filelist, reduce_size, whitelist=whitelist,
+                        blacklist=blacklist)
                     reduce_size -= self._sum_filestat_list(removed)
                     remove_list += removed
+                else:
+                    # remove files based on priority list
+                    for pattern in self.priority_list:
+                        if pattern == '*.dcm' or pattern == '*dcm':
+                            clean_folder = True
+                        else:
+                            clean_folder = False
+                        removed = self.clean_files_by_size(
+                            filelist, reduce_size,
+                            whitelist=whitelist, blacklist=[pattern],
+                            clean_folder=clean_folder)
+                        reduce_size -= self._sum_filestat_list(removed)
+                        remove_list += removed
         if dry_run:
             self._log_debug_removed(remove_list)
         else:
@@ -426,8 +439,10 @@ def main():
         description='clean folder')
     parser.add_argument('--folder', nargs='?', const=1, type=str,
                         help='root folder to be cleaned')
-    parser.add_argument('--max_folder_size', nargs='?', const=1, type=int,
-                        default=-1, help='maximum allowed folder size')
+    parser.add_argument('--folder_size_soft', nargs='?', const=1, type=int,
+                        default=-1, help='allowed folder size soft limit')
+    parser.add_argument('--folder_size_hard', nargs='?', const=1, type=int,
+                        default=-1, help='allowed folder size hard limit')
     parser.add_argument('--max_data_seconds', nargs='?', const=1, type=int,
                         default=-1, help='maximum allowed folder age')
     parser.add_argument('--whitelist', type=str, nargs='?',
@@ -450,7 +465,8 @@ def main():
     if priority_path:
         priority_list = read_path(priority_path)
     data_cleaner = DataCleaner(args.folder,
-                               args.max_folder_size,
+                               args.max_folder_size_soft,
+                               args.max_folder_size_hard,
                                args.max_data_seconds,
                                whitelist=(filter_list
                                           if args.whitelist else None),
