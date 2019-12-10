@@ -74,8 +74,8 @@ class DataCleaner:
         self.base_folder = folder
         if folder_size_soft_limit > folder_size_hard_limit:
             raise ValueError(
-                "max_folder_size_soft_limit can't be > "
-                "max_folder_size_hard_limit")
+                "folder_size_soft_limit can't be > "
+                "folder_size_hard_limit")
         self.soft_limit = folder_size_soft_limit
         self.hard_limit = folder_size_hard_limit
         self.soft_limit_bytes = 1.0 * self.soft_limit * 1024 * 1024
