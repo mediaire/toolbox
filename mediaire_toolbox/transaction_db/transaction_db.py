@@ -174,8 +174,11 @@ class TransactionDB:
             self.session.rollback()
             raise
 
-    def poll_queued(self):
-        """Polls the oldest queued transaction from the database, if any
+    def peek_queued(self):
+        """Peeks the oldest queued transaction from the database, if any.
+        Note that this is a peek, not a poll operation, so unless the 
+        transaction is moved into processing state, it will be returned
+        again on a subsequent call.
         
         Returns
         -------
