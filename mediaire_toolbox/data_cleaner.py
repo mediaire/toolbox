@@ -82,7 +82,8 @@ class DataCleaner:
         self.hard_limit_bytes = 1.0 * self.hard_limit * 1024 * 1024
         if min_data_seconds > 0 and max_data_seconds > 0:
             if min_data_seconds > max_data_seconds:
-                raise ValueError("min_data_seconds can't be > max_data_seconds")
+                raise ValueError(
+                    "min_data_seconds can't be > max_data_seconds")
         self.max_data_seconds = max_data_seconds
         self.min_data_seconds = min_data_seconds
         self.whitelist = whitelist if whitelist else []
@@ -91,7 +92,7 @@ class DataCleaner:
             ("Instantiated a DataCleaner on folder {%s} "
              "with max foldersize soft limit={%s}mb, "
              "max foldersize hard limit={%s}mb and max data seconds={%s}")
-             %(folder, self.soft_limit, self.hard_limit, max_data_seconds))
+            % (folder, self.soft_limit, self.hard_limit, max_data_seconds))
 
         self.priority_list = priority_list if priority_list else []
         self._check_valid_init()
@@ -118,18 +119,21 @@ class DataCleaner:
     @staticmethod
     def _creation_time_and_size(file):
         """Returns a (filename, creation_time, filesize) tuple"""
-        try:
-            stat = os.stat(file)
-        except Exception:
-            default_logger.warn(
-                "Failed to get stat of {}".format(file))
+        stat = os.stat(file)
         return file, stat.st_ctime, stat.st_size
 
     @staticmethod
     def _get_file_stats(filelist):
         """Transforms a list of filenames to a list of
         (filename, creation_time, filesize) tuples"""
-        return [DataCleaner._creation_time_and_size(f) for f in filelist]
+        to_return = []
+        for f in filelist:
+            try:
+                to_return.append(DataCleaner._creation_time_and_size(f))
+            except Exception:
+                default_logger.warn("Exception issuing os.stat for {}!"
+                                    .format(f))
+        return to_return
 
     @staticmethod
     def _sort_filestat_list_by_time(filestat_list):
@@ -140,10 +144,10 @@ class DataCleaner:
     def _filter_too_young_files(self, filestat_list):
         """Remove candidates from the (filename, creation_time, filesize)
         which are too young to be deleted"""
-        return filter(lambda x: not self._check_too_young(x[1], 
+        return filter(lambda x: not self._check_too_young(x[1],
                                                           self.min_data_seconds),
                       filestat_list)
-        
+
     @staticmethod
     def _sum_filestat_list(filestat_list):
         """Get the total file size of a list of filestats"""
@@ -195,7 +199,7 @@ class DataCleaner:
         sorted_remove_index = sorted(list(set(removed_index_list)))
         shift_counter = 0
         for i in sorted_remove_index:
-            del filelist[i-shift_counter]
+            del filelist[i - shift_counter]
             shift_counter += 1
 
     @staticmethod
@@ -209,7 +213,7 @@ class DataCleaner:
         default_logger.info(
             "Total to be removed {} files, with the total size of {:.2f} MB"
             .format(len(removed),
-                    DataCleaner._sum_filestat_list(removed)/1024/1024))
+                    DataCleaner._sum_filestat_list(removed) / 1024 / 1024))
 
     @staticmethod
     def clean_file_folder(filelist, file, whitelist, blacklist):
@@ -353,7 +357,8 @@ class DataCleaner:
         """Parent function of remove_empty_folders so that the base folder
         is not deleted"""
         removed = []
-        scan_dirs = [entry for entry in os.scandir(base_folder) if entry.is_dir()]
+        scan_dirs = [entry for entry in os.scandir(
+            base_folder) if entry.is_dir()]
         for entry in scan_dirs:
             removed += DataCleaner.remove_empty_folders(
                 os.path.join(base_folder, entry.name)
