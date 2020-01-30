@@ -130,9 +130,9 @@ class DataCleaner:
         for f in filelist:
             try:
                 to_return.append(DataCleaner._creation_time_and_size(f))
-            except Exception:
+            except Exception as e:
                 default_logger.warn("Exception issuing os.stat for {}!"
-                                    .format(f))
+                                    .format(f), e)
         return to_return
 
     @staticmethod
