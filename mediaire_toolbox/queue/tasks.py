@@ -7,8 +7,8 @@ from copy import deepcopy
 class Task(object):
     """Defines task objects that can be handled by the task manager."""
 
-    def __init__(self, t_id=None, user_id=None,
-                 product_id=None, product_version=None, tag=None, data=None,
+    def __init__(self, t_id=None, user_id=None, product_id=None,
+                 tag=None, data=None, coordinator_data=None,
                  timestamp=None, update_timestamp=None, error=None):
         """Initializes the Task object.
 
@@ -18,9 +18,14 @@ class Task(object):
             transaction id this task belongs to
         user_id: int
             user_id who submitted this task, if applicable.
+        product_id: int
+            product_id of the product
         tag: str
             String specifying the task. Unique for each task.
         data: dict
+            Data for specific products
+        coordinator_data: dict
+            Data for the coordinator module to use
         timestamp: float
             Timestamp of task creation from`time.time()`
         update_timestamp: float
@@ -31,11 +36,11 @@ class Task(object):
         self.t_id = t_id
         self.user_id = user_id
         self.product_id = product_id
-        self.product_version = product_version
         self.tag = tag
         self.timestamp = timestamp or int(time.time())
         self.update_timestamp = update_timestamp
         self.data = data
+        self.coordinator_data = coordinator_data
         self.error = error
         # self.update = None
 
@@ -44,10 +49,10 @@ class Task(object):
                 'timestamp': self.timestamp,
                 'update_timestamp': self.update_timestamp,
                 'data': self.data,
+                'coordinator_data': self.coordinator_data,
                 't_id': self.t_id,
                 'user_id': self.user_id,
                 'product_id': self.product_id,
-                'product_version': self.product_version,
                 'error': self.error}
 
     def to_json(self):
@@ -62,13 +67,13 @@ class Task(object):
         t_id = d.get('t_id', None)
         user_id = d.get('user_id', None)
         product_id = d.get('product_id', None)
-        product_version = d.get('product_version', None)
         update_timestamp = d.get('update_timestamp', None)
         data = d.get('data', None)
+        coordinator_data = d.get('coordinator_data', None)
         error = d.get('error', None)
         self.__init__(t_id=t_id, user_id=user_id,
-                      product_id=product_id, product_version=product_version,
-                      tag=tag, data=data,
+                      product_id=product_id, tag=tag, data=data,
+                      coordinator_data=coordinator_data,
                       timestamp=timestamp, update_timestamp=update_timestamp,
                       error=error)
         return self

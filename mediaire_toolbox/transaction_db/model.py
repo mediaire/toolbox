@@ -67,7 +67,7 @@ class Transaction(Base):
                  'sequences': self.sequences,
                  'archived': self.archived,
                  'patient_consent': self.patient_consent,
-                 'product_id' = self.product_id
+                 'product_id': self.product_id
                 }
 
     def __repr__(self):
