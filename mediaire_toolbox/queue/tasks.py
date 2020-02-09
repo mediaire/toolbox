@@ -103,3 +103,31 @@ class Task(object):
 
     def __repr__(self):
         return self.__str__()
+
+
+class CoordinatorData:
+    schema_version: '1.0'
+
+    @staticmethod
+    def _update_process(
+            task_progress=None, task_state=None,
+            processing_state=None, source=None, dest=None):
+        return {
+            'transaction_db_update': {
+                'task_progress': task_progress,
+                'task_state': task_state,
+                'processing_state': processing_state,
+            },
+            'source': 'source',
+            'dest': 'dest',
+            'schema_version': CoordinatorData.schema_version
+        }
+
+    @staticmethod
+    def _send_to_pacs(version=None, source=None, dest=None):
+        return {
+            'send_to_pacs'
+            'source': 'source',
+            'dest': 'dest',
+            'schema_version': CoordinatorData.schema_version
+        }
