@@ -217,7 +217,25 @@ class TestTransactionDB(unittest.TestCase):
         self.assertEqual(t.transaction_id, ut.transaction_id)
 
         t_db.close()
-        
+
+    def test_transaction_with_product_id(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1, product_id=1)
+        t_id_2 = t_db.create_transaction(tr_1, product_id=2)
+
+        t = t_db.get_transaction(t_id)
+        self.assertNotEqual(None, t)
+        self.assertEqual(1, t.product_id)
+
+        t2 = t_db.get_transaction(t_id_2)
+        self.assertNotEqual(None, t2)
+        self.assertEqual(2, t2.product_id)
+
+        t_db.close()
+
     def test_migrations(self):
         temp_folder = tempfile.mkdtemp(suffix='_test_migrations_transaction_db_')
         temp_db_path = os.path.join(temp_folder, 't_v1.db')

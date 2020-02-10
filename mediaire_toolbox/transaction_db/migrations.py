@@ -33,7 +33,10 @@ MIGRATIONS = {
     8: [
         "ALTER TABLE transactions ADD COLUMN patient_consent INT DEFAULT 0",
     ],
-    9: []
+    9: [],
+    10: [
+        "ALTER TABLE transactions ADD COLUMN product_id INT DEFAULT 1"
+    ]
 }
 
 

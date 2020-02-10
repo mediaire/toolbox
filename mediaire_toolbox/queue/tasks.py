@@ -7,7 +7,8 @@ from copy import deepcopy
 class Task(object):
     """Defines task objects that can be handled by the task manager."""
 
-    def __init__(self, t_id=None, user_id=None, tag=None, data=None,
+    def __init__(self, t_id=None, user_id=None, product_id=None,
+                 tag=None, data=None,
                  timestamp=None, update_timestamp=None, error=None):
         """Initializes the Task object.
 
@@ -17,9 +18,12 @@ class Task(object):
             transaction id this task belongs to
         user_id: int
             user_id who submitted this task, if applicable.
+        product_id: int
+            product_id of the product
         tag: str
             String specifying the task. Unique for each task.
         data: dict
+            Data for specific products
         timestamp: float
             Timestamp of task creation from`time.time()`
         update_timestamp: float
@@ -29,6 +33,7 @@ class Task(object):
         """
         self.t_id = t_id
         self.user_id = user_id
+        self.product_id = product_id
         self.tag = tag
         self.timestamp = timestamp or int(time.time())
         self.update_timestamp = update_timestamp
@@ -43,6 +48,7 @@ class Task(object):
                 'data': self.data,
                 't_id': self.t_id,
                 'user_id': self.user_id,
+                'product_id': self.product_id,
                 'error': self.error}
 
     def to_json(self):
@@ -56,10 +62,12 @@ class Task(object):
         timestamp = d['timestamp']
         t_id = d.get('t_id', None)
         user_id = d.get('user_id', None)
+        product_id = d.get('product_id', None)
         update_timestamp = d.get('update_timestamp', None)
         data = d.get('data', None)
         error = d.get('error', None)
-        self.__init__(t_id=t_id, user_id=user_id, tag=tag, data=data,
+        self.__init__(t_id=t_id, user_id=user_id,
+                      product_id=product_id, tag=tag, data=data,
                       timestamp=timestamp, update_timestamp=update_timestamp,
                       error=error)
         return self
@@ -84,11 +92,8 @@ class Task(object):
         child_task.update_timestamp = int(time.time())
         return child_task
 
-
-
     def __str__(self):
         return str(self.to_dict())
 
     def __repr__(self):
         return self.__str__()
-
