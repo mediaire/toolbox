@@ -100,12 +100,20 @@ class TransactionDB:
             if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
                 migrate(self.session, engine, db_version)
 
-    def create_transaction(self, t: Transaction, user_id=None) -> int:
-        """will set the provided transaction object as queued, 
+    def create_transaction(
+            self, t: Transaction,
+            user_id=None, product_id=None) -> int:
+        """will set the provided transaction object as queued,
         add it to the DB and return the transaction id.
-        
+
         If the transaction has a last_message JSON with chosen T1/T2,
-        it will index the sequence names as well."""
+        it will index the sequence names as well.
+
+        Parameters
+        ----------
+        user_id: int
+        product_id: int
+        """
         try:
             t.task_state = TaskState.queued
             self.session.add(t)
@@ -115,11 +123,13 @@ class TransactionDB:
                 user = self.session.query(User).get(user_id)
                 if not user:
                     raise TransactionDBException(("The provided user doesn't "
-                                                  "exist"))                
+                                                  "exist"))
                 ut = UserTransaction()
                 ut.user_id = user_id
                 ut.transaction_id = t.transaction_id
                 self.session.add(ut)
+            if product_id:
+                t.product_id = product_id
             self.session.commit()
 
             # index.index_institution(t)

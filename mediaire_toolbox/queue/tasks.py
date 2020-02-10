@@ -8,7 +8,7 @@ class Task(object):
     """Defines task objects that can be handled by the task manager."""
 
     def __init__(self, t_id=None, user_id=None, product_id=None,
-                 tag=None, data=None, coordinator_data=None,
+                 tag=None, data=None,
                  timestamp=None, update_timestamp=None, error=None):
         """Initializes the Task object.
 
@@ -24,8 +24,6 @@ class Task(object):
             String specifying the task. Unique for each task.
         data: dict
             Data for specific products
-        coordinator_data: dict
-            Data for the coordinator module to use
         timestamp: float
             Timestamp of task creation from`time.time()`
         update_timestamp: float
@@ -40,7 +38,6 @@ class Task(object):
         self.timestamp = timestamp or int(time.time())
         self.update_timestamp = update_timestamp
         self.data = data
-        self.coordinator_data = coordinator_data
         self.error = error
         # self.update = None
 
@@ -49,7 +46,6 @@ class Task(object):
                 'timestamp': self.timestamp,
                 'update_timestamp': self.update_timestamp,
                 'data': self.data,
-                'coordinator_data': self.coordinator_data,
                 't_id': self.t_id,
                 'user_id': self.user_id,
                 'product_id': self.product_id,
@@ -69,11 +65,9 @@ class Task(object):
         product_id = d.get('product_id', None)
         update_timestamp = d.get('update_timestamp', None)
         data = d.get('data', None)
-        coordinator_data = d.get('coordinator_data', None)
         error = d.get('error', None)
         self.__init__(t_id=t_id, user_id=user_id,
                       product_id=product_id, tag=tag, data=data,
-                      coordinator_data=coordinator_data,
                       timestamp=timestamp, update_timestamp=update_timestamp,
                       error=error)
         return self
@@ -103,31 +97,3 @@ class Task(object):
 
     def __repr__(self):
         return self.__str__()
-
-
-class CoordinatorData:
-    schema_version: '1.0'
-
-    @staticmethod
-    def _update_process(
-            task_progress=None, task_state=None,
-            processing_state=None, source=None, dest=None):
-        return {
-            'transaction_db_update': {
-                'task_progress': task_progress,
-                'task_state': task_state,
-                'processing_state': processing_state,
-            },
-            'source': 'source',
-            'dest': 'dest',
-            'schema_version': CoordinatorData.schema_version
-        }
-
-    @staticmethod
-    def _send_to_pacs(version=None, source=None, dest=None):
-        return {
-            'send_to_pacs'
-            'source': 'source',
-            'dest': 'dest',
-            'schema_version': CoordinatorData.schema_version
-        }
