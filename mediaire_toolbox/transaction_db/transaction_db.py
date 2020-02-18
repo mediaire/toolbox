@@ -231,7 +231,6 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.status = status
-            t.end_date = datetime.datetime.utcnow()
             self.session.commit()
         except:
             self.session.rollback()
@@ -243,7 +242,6 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_skipped = 1
-            t.end_date = datetime.datetime.utcnow()
             if cause:
                 t.error = cause
             self.session.commit()
@@ -257,7 +255,6 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_cancelled = 1
-            t.end_date = datetime.datetime.utcnow()
             if cause:
                 t.error = cause
             self.session.commit()
