@@ -116,6 +116,8 @@ class TransactionDB:
         """
         try:
             t.task_state = TaskState.queued
+            if product_id:
+                t.product_id = product_id
             self.session.add(t)
             # when we commit, we get the transaction ID
             self.session.commit()
@@ -128,8 +130,6 @@ class TransactionDB:
                 ut.user_id = user_id
                 ut.transaction_id = t.transaction_id
                 self.session.add(ut)
-            if product_id:
-                t.product_id = product_id
             self.session.commit()
 
             # index.index_institution(t)
