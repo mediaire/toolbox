@@ -155,7 +155,6 @@ class TestTransactionDB(unittest.TestCase):
         t = t_db.get_transaction(t_id)
 
         self.assertEqual(t.task_skipped, 1)
-        self.assertTrue(t.end_date > t.start_date)
         self.assertEqual(t.error, 'because it is skipped')
 
         t_db.close()
@@ -172,7 +171,6 @@ class TestTransactionDB(unittest.TestCase):
         t = t_db.get_transaction(t_id)
 
         self.assertEqual(t.task_cancelled, 1)
-        self.assertTrue(t.end_date > t.start_date)
         self.assertEqual(t.error, 'because it is cancelled')
 
         t_db.close()
@@ -221,10 +219,11 @@ class TestTransactionDB(unittest.TestCase):
     def test_transaction_with_product_id(self):
         engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
+        tr_2 = self._get_test_transaction()
 
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1, product_id=1)
-        t_id_2 = t_db.create_transaction(tr_1, product_id=2)
+        t_id_2 = t_db.create_transaction(tr_2, product_id=2)
 
         t = t_db.get_transaction(t_id)
         self.assertNotEqual(None, t)
