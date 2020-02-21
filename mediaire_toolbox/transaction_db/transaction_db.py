@@ -4,15 +4,15 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 from mediaire_toolbox.constants import TRANSACTIONS_DB_SCHEMA_NAME, \
-                                       TRANSACTIONS_DB_SCHEMA_VERSION
+    TRANSACTIONS_DB_SCHEMA_VERSION
 from mediaire_toolbox.transaction_db.model import Transaction, \
-                                                  SchemaVersion, \
-                                                  create_all, \
-                                                  UserTransaction, \
-                                                  User, \
-                                                  Role, \
-                                                  UserRole
-                                                  
+    SchemaVersion, \
+    create_all, \
+    UserTransaction, \
+    User, \
+    Role, \
+    UserRole
+
 from mediaire_toolbox.task_state import TaskState
 from mediaire_toolbox.transaction_db import migrations
 from mediaire_toolbox.transaction_db import index
@@ -88,7 +88,8 @@ class TransactionDB:
         """
         self.session = scoped_session(sessionmaker(bind=engine))
         create_all(engine)
-        db_version = self.session.query(SchemaVersion).get(TRANSACTIONS_DB_SCHEMA_NAME)
+        db_version = self.session.query(
+            SchemaVersion).get(TRANSACTIONS_DB_SCHEMA_NAME)
         if not db_version:
             # it's the first time that we create the database
             # therefore we don't have a row in the table 'schema_version'
@@ -164,7 +165,7 @@ class TransactionDB:
                        id_: int,
                        new_processing_state: str,
                        last_message: str,
-                       task_progress:int=0
+                       task_progress: int=0
                        ):
         """to be called when a transaction changes from one processing task
         to another
@@ -211,11 +212,12 @@ class TransactionDB:
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
         End_date automatically adjusted. Status is automatically set to 
-        'unseen'."""
+        'unseen' (unless it was already reviewed)."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.completed
-            t.status = 'unseen'
+            if not t.status or t.status == '':
+                t.status = 'unseen'
             t.end_date = datetime.datetime.utcnow()
             if clear_error:
                 t.error = ''
@@ -223,7 +225,7 @@ class TransactionDB:
         except:
             self.session.rollback()
             raise
-        
+
     def set_status(self, id_: int, status: str):
         """to be called e.g. when the radiologist visits the results of a study
         in the new platform ('reviewed') or the report is sent to the PACS
@@ -305,7 +307,7 @@ class TransactionDB:
         except Exception:
             self.session.rollback()
             raise
-        
+
     def add_user(self, name, password):
         """For multi-tenant transaction DBs, add a new user to it.
         
@@ -319,17 +321,17 @@ class TransactionDB:
             if user:
                 raise TransactionDBException(("A user with the same "
                                               "name already exists"))
-                
+
             user = User()
             user.name = name
             user.hashed_password = user.password_hash(password)
             self.session.add(user)
-            self.session.commit()            
+            self.session.commit()
             user = self.session.query(User).filter_by(name=name).first()
             return user.id
         finally:
-            self.session.rollback()        
-        
+            self.session.rollback()
+
     def add_role(self, role_id: str, role_description: str,
                  permissions: int):
         """For multi-tenant transaction DBs, where users have certain roles,
@@ -340,7 +342,7 @@ class TransactionDB:
             role = self.session.query(Role).filter_by(role_id=role_id).first()
             if role:
                 raise TransactionDBException(("The role already exists"))
-            
+
             role = Role()
             role.role_id = role_id
             role.description = role_description
@@ -349,16 +351,16 @@ class TransactionDB:
             self.session.commit()
         finally:
             self.session.rollback()
-            
+
     def __pre_conditions_user_role(self, user_id, role_id):
         user = self.session.query(User).get(user_id)
         if not user:
             raise TransactionDBException(("The user doesn't exist"))
-        
+
         role = self.session.query(Role).get(role_id)
         if not role:
             raise TransactionDBException(("The role doesn't exist"))
-            
+
     def add_user_role(self, user_id: int, role_id: str):
         """
         Assign a role to a user.
@@ -383,9 +385,9 @@ class TransactionDB:
             if user_role:
                 raise TransactionDBException(("The role is already assigned"
                                               " to this user."))
-            
+
             self.__pre_conditions_user_role(user_id, role_id)
-            
+
             user_role = UserRole()
             user_role.role_id = role_id
             user_role.user_id = user_id
@@ -393,7 +395,7 @@ class TransactionDB:
             self.session.commit()
         finally:
             self.session.rollback()
-    
+
     def revoke_user_role(self, user_id: int, role_id: str):
         """Revoke a role from a user.
         
@@ -414,12 +416,12 @@ class TransactionDB:
             if not user_role:
                 raise TransactionDBException(("The role wasn't assigned"
                                               " to this user."))
-            
+
             self.session.delete(user_role)
             self.session.commit()
         finally:
             self.session.rollback()
-        
+
     def remove_user(self, user_id: int):
         """Remove a user from the database"""
         try:
@@ -427,10 +429,10 @@ class TransactionDB:
             if not user:
                 raise TransactionDBException("The user doesn't exist")
             self.session.delete(user)
-            self.session.commit()            
+            self.session.commit()
         finally:
-            self.session.rollback()   
-        
+            self.session.rollback()
+
     def close(self):
         self.session.close()
 
