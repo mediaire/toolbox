@@ -121,7 +121,14 @@ class User(Base):
                  'name': self.name,
                  'hashed_password': self.hashed_password,
                  'added': self.added.strftime("%Y-%m-%d %H:%M:%S") }
-        
+
+    def read_dict(self, d: dict):
+        self.id = d.get('id')
+        self.name = d.get('name')
+        self.hashed_password = d.get('hashed_password')
+        self.added = d.get('added')
+        return self
+
 
 class UserTransaction(Base):
     
@@ -136,6 +143,11 @@ class UserTransaction(Base):
     def to_dict(self):
         return { 'user_id': self.user_id,
                  'transaction_id': self.transaction_id }
+
+    def read_dict(self, d: dict):
+        self.user_id = d.get('user_id')
+        self.transaction_id = d.get('transaction_id')
+        return self
 
 
 class UserRole(Base):
@@ -152,6 +164,11 @@ class UserRole(Base):
     def to_dict(self):
         return { 'user_id': self.user_id,
                  'role_id': self.role_id }
+
+    def read_dict(self, d: dict):
+        self.user_id = d.get('user_id')
+        self.role_id = d.get('role_id')
+        return self
     
     
 class Role(Base):
@@ -168,6 +185,10 @@ class Role(Base):
     
     def to_dict(self):
         return {'role_id': self.user_id}
+
+    def read_dict(self, d: dict):
+        self.role_id = d.get('role_id')
+        return self
 
 
 class SchemaVersion(Base):
