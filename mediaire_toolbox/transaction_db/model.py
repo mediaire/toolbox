@@ -70,6 +70,30 @@ class Transaction(Base):
                  'product_id': self.product_id
                 }
 
+    def read_dict(self, d: dict):
+        """Read transaction from dictionary"""
+        self.transaction_id = d.get('transaction_id')
+        self.study_id = d.get('study_id')
+        self.patient_id = d.get('patient_id')
+        self.name = d.get('name')
+        self.birth_date = d.get('birth_date')
+        self.start_date = d.get('start_date')
+        self.end_date = d.get('end_date')
+        self.task_state = d.get('task_state')
+        self.processing_state = d.get('processing_state')
+        self.study_date = d.get('study_date')
+        self.last_message = d.get('last_message')
+        self.task_progress = d.get('task_progress')
+        self.error = d.get('error')
+        self.task_cancelled = d.get('task_cancelled')
+        self.status = d.get('status')
+        self.institution = d.get('institution')
+        self.sequences = d.get('sequences')
+        self.archived = d.get('archived')
+        self.patient_consent = d.get('patient_consent')
+        self.product_id = d.get('product_id')
+        return self
+
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (
             self.transaction_id, self.patient_id, self.start_date)

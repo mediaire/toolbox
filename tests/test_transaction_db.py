@@ -30,7 +30,17 @@ class TestTransactionDB(unittest.TestCase):
         t.study_id = 'S1'
         t.birth_date = datetime(1982, 10, 29)
         return t
-    
+
+    def test_read_transaction_from_dict(self):
+        d = {'transaction_id': 1, 'name': 'John Doe'}
+        t = Transaction().read_dict(d)
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(t)
+        t_from_db = t_db.get_transaction(t_id)
+        self.assertEqual(d['transaction_id'], t_from_db.transaction_id)
+        self.assertEqual(d['name'], t_from_db.name)
+
     def test_create_transaction_index_sequences(self):
         engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
