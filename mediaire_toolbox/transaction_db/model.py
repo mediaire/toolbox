@@ -76,15 +76,23 @@ class Transaction(Base):
         self.study_id = d.get('study_id')
         self.patient_id = d.get('patient_id')
         self.name = d.get('name')
-        self.birth_date = d.get('birth_date')
-        self.start_date = d.get('start_date')
-        self.end_date = d.get('end_date')
-        self.task_state = d.get('task_state')
+        birth_date = d.get('birth_date')
+        start_date = d.get('start_date')
+        end_date = d.get('end_date')
+        self.birth_date = datetime.datetime.strptime(
+            birth_date, "%d/%m/%Y") if birth_date else None
+        self.start_date = datetime.datetime.strptime(
+            start_date, "%Y-%m-%d %H:%M:%S") if start_date else None
+        self.end_date = datetime.datetime.strptime(
+            end_date, "%Y-%m-%d %H:%M:%S") if end_date else None
+        self.task_state = TaskState[
+            d.get('task_state')] if d.get('task_state') else None
         self.processing_state = d.get('processing_state')
         self.study_date = d.get('study_date')
         self.last_message = d.get('last_message')
         self.task_progress = d.get('task_progress')
         self.error = d.get('error')
+        self.task_skipped = d.get('task_skipped')
         self.task_cancelled = d.get('task_cancelled')
         self.status = d.get('status')
         self.institution = d.get('institution')
@@ -126,7 +134,9 @@ class User(Base):
         self.id = d.get('id')
         self.name = d.get('name')
         self.hashed_password = d.get('hashed_password')
-        self.added = d.get('added')
+        added = d.get('added')
+        self.added = datetime.datetime.strptime(
+            added, "%Y-%m-%d %H:%M:%S") if added else None
         return self
 
 
