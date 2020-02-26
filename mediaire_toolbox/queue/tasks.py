@@ -66,10 +66,11 @@ class Task(object):
         update_timestamp = d.get('update_timestamp', None)
         data = d.get('data', None)
         error = d.get('error', None)
-        self.__init__(t_id=t_id, user_id=user_id,
-                      product_id=product_id, tag=tag, data=data,
-                      timestamp=timestamp, update_timestamp=update_timestamp,
-                      error=error)
+        Task.__init__(
+            self, t_id=t_id, user_id=user_id,
+            product_id=product_id, tag=tag, data=data,
+            timestamp=timestamp, update_timestamp=update_timestamp,
+            error=error)
         return self
 
     def read_bytes(self, bytestring):

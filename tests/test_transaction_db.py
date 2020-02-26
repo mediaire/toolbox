@@ -3,8 +3,8 @@ import tempfile
 import shutil
 import json
 import os
-
-from datetime import datetime
+import types
+from datetime import datetime, date
 from sqlalchemy import create_engine
 
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
@@ -30,7 +30,75 @@ class TestTransactionDB(unittest.TestCase):
         t.study_id = 'S1'
         t.birth_date = datetime(1982, 10, 29)
         return t
-    
+
+    def test_read_transaction_from_dict(self):
+        d = {
+            'transaction_id': 1, 'name': 'John Doe',
+            'birth_date': '01/02/2020'}
+        t = Transaction().read_dict(d)
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(t)
+        t_from_db = t_db.get_transaction(t_id)
+        self.assertEqual(d['transaction_id'], t_from_db.transaction_id)
+        self.assertEqual(d['name'], t_from_db.name)
+        self.assertEqual(date(2020, 2, 1), t_from_db.birth_date)
+
+    def test_read_dict_dates(self):
+        # test that date and datetimes are parsed correctly
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        datetime_vars = ['start_date', 'end_date']
+        date_vars = ['birth_date']
+        t = Transaction()
+        for key in datetime_vars:
+            setattr(t, key, datetime(2020, 2, 1, 18, 30, 4))
+        for key in date_vars:
+            setattr(t, key, datetime(2020, 2, 1))
+
+        t_r = Transaction().read_dict(t.to_dict())
+        t_id = t_db.create_transaction(t_r)
+        t_r_from_db = t_db.get_transaction(t_id)
+        self.assertEqual(
+            datetime(2020, 2, 1, 18, 30, 4), t_r_from_db.start_date)
+        self.assertEqual(
+            datetime(2020, 2, 1, 18, 30, 4), t_r_from_db.end_date)
+        self.assertEqual(date(2020, 2, 1), t_r_from_db.birth_date)
+
+    def test_read_dict_task_state(self):
+        # test that task state is parsed correctly
+        t = Transaction()
+        t.task_state = TaskState.completed
+        t_r = Transaction().read_dict(t.to_dict())
+        self.assertEqual(TaskState.completed, t_r.task_state)
+
+    def test_read_transaction_from_dict_is_complete(self):
+        # get all variables of transaction except non generic types
+        # Test that these variables are read from the deserialization
+        # function
+        non_generic_vars = [
+            'start_date', 'end_date', 'birth_date', 'task_state']
+        CALLABLES = types.FunctionType, types.MethodType
+        var = [
+            key for key, value in Transaction.__dict__.items()
+            if not isinstance(value, CALLABLES)]
+        var = [
+            key for key in var
+            if key[0] != '_' and key not in non_generic_vars]
+
+        t = Transaction()
+        counter = 0
+        for key in var:
+            counter += 1
+            setattr(t, key, counter)
+
+        t2 = Transaction()
+        t2.read_dict(t.to_dict())
+        counter = 0
+        for key in var:
+            counter += 1
+            self.assertEqual(counter, getattr(t2, key))
+
     def test_create_transaction_index_sequences(self):
         engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
@@ -252,6 +320,8 @@ class TestTransactionDB(unittest.TestCase):
         t.task_state = TaskState.completed
         t.start_date = datetime.utcnow()
         t.end_date = datetime.utcnow()
+        print(t.to_dict()['task_state'])
+        print(t.to_dict()['task_state'] == 'completed')
         self.assertTrue(t.to_dict()['task_state'] == 'completed')
         json.dumps(t.to_dict())
 

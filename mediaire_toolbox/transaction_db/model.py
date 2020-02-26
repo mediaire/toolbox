@@ -70,6 +70,38 @@ class Transaction(Base):
                  'product_id': self.product_id
                 }
 
+    def read_dict(self, d: dict):
+        """Read transaction from dictionary"""
+        self.transaction_id = d.get('transaction_id')
+        self.study_id = d.get('study_id')
+        self.patient_id = d.get('patient_id')
+        self.name = d.get('name')
+        birth_date = d.get('birth_date')
+        start_date = d.get('start_date')
+        end_date = d.get('end_date')
+        self.birth_date = datetime.datetime.strptime(
+            birth_date, "%d/%m/%Y") if birth_date else None
+        self.start_date = datetime.datetime.strptime(
+            start_date, "%Y-%m-%d %H:%M:%S") if start_date else None
+        self.end_date = datetime.datetime.strptime(
+            end_date, "%Y-%m-%d %H:%M:%S") if end_date else None
+        self.task_state = TaskState[
+            d.get('task_state')] if d.get('task_state') else None
+        self.processing_state = d.get('processing_state')
+        self.study_date = d.get('study_date')
+        self.last_message = d.get('last_message')
+        self.task_progress = d.get('task_progress')
+        self.error = d.get('error')
+        self.task_skipped = d.get('task_skipped')
+        self.task_cancelled = d.get('task_cancelled')
+        self.status = d.get('status')
+        self.institution = d.get('institution')
+        self.sequences = d.get('sequences')
+        self.archived = d.get('archived')
+        self.patient_consent = d.get('patient_consent')
+        self.product_id = d.get('product_id')
+        return self
+
     def __repr__(self):
         return "<Transaction(transaction_id='%s', patient_id='%s', start_date='%s')>" % (
             self.transaction_id, self.patient_id, self.start_date)
@@ -97,7 +129,16 @@ class User(Base):
                  'name': self.name,
                  'hashed_password': self.hashed_password,
                  'added': self.added.strftime("%Y-%m-%d %H:%M:%S") }
-        
+
+    def read_dict(self, d: dict):
+        self.id = d.get('id')
+        self.name = d.get('name')
+        self.hashed_password = d.get('hashed_password')
+        added = d.get('added')
+        self.added = datetime.datetime.strptime(
+            added, "%Y-%m-%d %H:%M:%S") if added else None
+        return self
+
 
 class UserTransaction(Base):
     
@@ -112,6 +153,11 @@ class UserTransaction(Base):
     def to_dict(self):
         return { 'user_id': self.user_id,
                  'transaction_id': self.transaction_id }
+
+    def read_dict(self, d: dict):
+        self.user_id = d.get('user_id')
+        self.transaction_id = d.get('transaction_id')
+        return self
 
 
 class UserRole(Base):
@@ -128,6 +174,11 @@ class UserRole(Base):
     def to_dict(self):
         return { 'user_id': self.user_id,
                  'role_id': self.role_id }
+
+    def read_dict(self, d: dict):
+        self.user_id = d.get('user_id')
+        self.role_id = d.get('role_id')
+        return self
     
     
 class Role(Base):
@@ -144,6 +195,10 @@ class Role(Base):
     
     def to_dict(self):
         return {'role_id': self.user_id}
+
+    def read_dict(self, d: dict):
+        self.role_id = d.get('role_id')
+        return self
 
 
 class SchemaVersion(Base):
