@@ -161,6 +161,47 @@ class TransactionDB:
                 transaction doesn't exist in DB (%s)
                 """ % id)
 
+    def set_queued(self,
+                   id_: int,
+                   last_message: str = None):
+        """queues the Transaction and sets its processing state as 
+        'waiting'. This signals consumers that this transaction shouldn't
+        continue and will be polled in the future.
+        
+        Parameters
+        ----------
+        id_
+            Transaction ID
+        last_message
+            stringified JSON metadata to save"""
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.task_state = TaskState.queued
+            t.processing_state = 'waiting'
+            if last_message:
+                t.last_message = last_message
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
+
+    def peek_queued(self):
+        """Peeks the oldest queued transaction from the database, if any.
+        Note that this is a peek, not a poll operation, so unless the 
+        transaction is moved into processing state, it will be returned
+        again on a subsequent call.
+        
+        Returns
+        -------
+            A Transaction object, or None"""
+        queued = self.session.query(Transaction) \
+            .filter(Transaction.task_state == TaskState.queued) \
+            .filter(Transaction.processing_state == 'waiting') \
+            .order_by(Transaction.start_date.asc())
+        if queued:
+            return queued.first()
+        return None
+
     def set_processing(self,
                        id_: int,
                        new_processing_state: str,
