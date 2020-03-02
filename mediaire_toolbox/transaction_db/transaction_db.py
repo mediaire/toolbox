@@ -163,7 +163,7 @@ class TransactionDB:
 
     def set_queued(self,
                    id_: int,
-                   last_message: str):
+                   last_message: str = None):
         """queues the Transaction and sets its processing state as 
         'waiting'. This signals consumers that this transaction shouldn't
         continue and will be polled in the future.
@@ -178,7 +178,8 @@ class TransactionDB:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.queued
             t.processing_state = 'waiting'
-            t.last_message = last_message
+            if last_message:
+                t.last_message = last_message
             self.session.commit()
         except:
             self.session.rollback()
