@@ -101,14 +101,24 @@ class TransactionDB:
             if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
                 migrate(self.session, engine, db_version)
 
-    def create_transaction(self, t: Transaction, user_id=None) -> int:
-        """will set the provided transaction object as queued, 
+    def create_transaction(
+            self, t: Transaction,
+            user_id=None, product_id=None) -> int:
+        """will set the provided transaction object as queued,
         add it to the DB and return the transaction id.
-        
+
         If the transaction has a last_message JSON with chosen T1/T2,
-        it will index the sequence names as well."""
+        it will index the sequence names as well.
+
+        Parameters
+        ----------
+        user_id: int
+        product_id: int
+        """
         try:
             t.task_state = TaskState.queued
+            if product_id:
+                t.product_id = product_id
             self.session.add(t)
             # when we commit, we get the transaction ID
             self.session.commit()
@@ -242,11 +252,12 @@ class TransactionDB:
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
         End_date automatically adjusted. Status is automatically set to 
-        'unseen'."""
+        'unseen' (unless it was already reviewed)."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.completed
-            t.status = 'unseen'
+            if not t.status or t.status == '':
+                t.status = 'unseen'
             t.end_date = datetime.datetime.utcnow()
             if clear_error:
                 t.error = ''
@@ -262,7 +273,6 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.status = status
-            t.end_date = datetime.datetime.utcnow()
             self.session.commit()
         except:
             self.session.rollback()
@@ -274,7 +284,6 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_skipped = 1
-            t.end_date = datetime.datetime.utcnow()
             if cause:
                 t.error = cause
             self.session.commit()
@@ -288,7 +297,6 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_cancelled = 1
-            t.end_date = datetime.datetime.utcnow()
             if cause:
                 t.error = cause
             self.session.commit()
