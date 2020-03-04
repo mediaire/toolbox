@@ -4,7 +4,6 @@ import shutil
 import json
 import os
 import types
-import random
 
 from datetime import datetime, date, timedelta
 from sqlalchemy import create_engine
@@ -13,7 +12,6 @@ from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
 from mediaire_toolbox.transaction_db.model import (
     TaskState, Transaction, UserTransaction, User, Role, UserRole
 )
-from mediaire_toolbox.transaction_db.t_db_retry import t_db_retry
 
 from temp_db_base import TempDBFactory
 from _sqlite3 import OperationalError
