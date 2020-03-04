@@ -1,0 +1,4 @@
+
+
+class TransactionDBException(Exception):
+    pass

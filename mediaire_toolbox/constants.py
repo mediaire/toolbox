@@ -4,3 +4,6 @@ number here if you add more fields to the Transaction object, and implement
 the migration SQL queries in migrations.py"""
 TRANSACTIONS_DB_SCHEMA_NAME = "TRANSACTION"
 TRANSACTIONS_DB_SCHEMA_VERSION = 10
+
+RETRY_DATABASE_OP_SECONDS = 5
+RETRY_DATABASE_OP_TIMES = 5

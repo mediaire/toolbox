@@ -13,9 +13,12 @@ from mediaire_toolbox.transaction_db.model import Transaction, \
     Role, \
     UserRole
 
-from mediaire_toolbox.task_state import TaskState
+from mediaire_toolbox.transaction_db.exceptions import TransactionDBException
 from mediaire_toolbox.transaction_db import migrations
 from mediaire_toolbox.transaction_db import index
+from mediaire_toolbox.task_state import TaskState
+from mediaire_toolbox.transaction_db.t_db_retry import t_db_retry
+
 import datetime
 
 logger = logging.getLogger(__name__)
@@ -74,7 +77,6 @@ def migrate(session, engine, db_version):
         migrate_scripts(
             session, engine,
             from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
-
 
 class TransactionDB:
     """Connection to a DB of transactions where we can track status, failures, 
@@ -143,6 +145,7 @@ class TransactionDB:
                 self.session.delete(t)
             raise
 
+    @t_db_retry
     def get_transaction(self, id_: int) -> Transaction:
         try:
             return self._get_transaction_or_raise_exception(id_)
@@ -161,6 +164,7 @@ class TransactionDB:
                 transaction doesn't exist in DB (%s)
                 """ % id)
 
+    @t_db_retry
     def set_queued(self,
                    id_: int,
                    last_message: str = None):
@@ -185,6 +189,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def peek_queued(self):
         """Peeks the oldest queued transaction from the database, if any.
         Note that this is a peek, not a poll operation, so unless the 
@@ -202,6 +207,7 @@ class TransactionDB:
             return queued.first()
         return None
 
+    @t_db_retry
     def set_processing(self,
                        id_: int,
                        new_processing_state: str,
@@ -236,6 +242,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def set_failed(self, id_: int, cause: str):
         """to be called when a transaction fails. Save error information
         from 'cause'"""
@@ -249,6 +256,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def set_completed(self, id_: int, clear_error: bool=True):
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
@@ -267,6 +275,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def set_status(self, id_: int, status: str):
         """to be called e.g. when the radiologist visits the results of a study
         in the new platform ('reviewed') or the report is sent to the PACS
@@ -279,6 +288,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def set_skipped(self, id_: int, cause: str=None):
         """to be called when the transaction is skipped. Save skip information
         from 'cause'"""
@@ -292,6 +302,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def set_cancelled(self, id_: int, cause: str=None):
         """to be called when the transaction is cancelled. Save cancel information
         from 'cause'"""
@@ -305,6 +316,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def set_archived(self, id_: int):
         """to be called when the transaction is archived."""
         try:
@@ -315,6 +327,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def set_last_message(self, id_: int, last_message: str):
         """Updates the last_message field of the transaction
         with the given string."""
@@ -326,6 +339,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def set_patient_consent(self, id_: int):
         """Mark this transaction ID with data usage patient consent"""
         try:
@@ -336,6 +350,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def unset_patient_consent(self, id_: int):
         """Mark this transaction ID with NO data usage patient consent"""
         try:
@@ -346,6 +361,7 @@ class TransactionDB:
             self.session.rollback()
             raise
 
+    @t_db_retry
     def add_user(self, name, password):
         """For multi-tenant transaction DBs, add a new user to it.
         
@@ -370,6 +386,7 @@ class TransactionDB:
         finally:
             self.session.rollback()
 
+    @t_db_retry
     def add_role(self, role_id: str, role_description: str,
                  permissions: int):
         """For multi-tenant transaction DBs, where users have certain roles,
@@ -399,6 +416,7 @@ class TransactionDB:
         if not role:
             raise TransactionDBException(("The role doesn't exist"))
 
+    @t_db_retry
     def add_user_role(self, user_id: int, role_id: str):
         """
         Assign a role to a user.
@@ -434,6 +452,7 @@ class TransactionDB:
         finally:
             self.session.rollback()
 
+    @t_db_retry
     def revoke_user_role(self, user_id: int, role_id: str):
         """Revoke a role from a user.
         
@@ -460,6 +479,7 @@ class TransactionDB:
         finally:
             self.session.rollback()
 
+    @t_db_retry
     def remove_user(self, user_id: int):
         """Remove a user from the database"""
         try:
@@ -473,7 +493,3 @@ class TransactionDB:
 
     def close(self):
         self.session.close()
-
-
-class TransactionDBException(Exception):
-    pass
