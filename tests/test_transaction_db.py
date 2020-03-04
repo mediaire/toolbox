@@ -4,6 +4,7 @@ import shutil
 import json
 import os
 import types
+
 from datetime import datetime, date, timedelta
 from sqlalchemy import create_engine
 
@@ -13,11 +14,13 @@ from mediaire_toolbox.transaction_db.model import (
 )
 
 from temp_db_base import TempDBFactory
+from _sqlite3 import OperationalError
 
 temp_db = TempDBFactory('test_transaction_db')
 
+
 class TestTransactionDB(unittest.TestCase):
-        
+
     @classmethod
     def tearDownClass(self):
         temp_db.delete_temp_folder()
@@ -196,7 +199,7 @@ class TestTransactionDB(unittest.TestCase):
         t = t_db.get_transaction(t_id)
         self.assertEqual(t.archived, 1)
         t_db.close()
-        
+
     def test_transaction_queued(self):
         engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
@@ -205,15 +208,15 @@ class TestTransactionDB(unittest.TestCase):
         t_id = t_db.create_transaction(tr_1)
         t = t_db.get_transaction(t_id)
         self.assertFalse(t.processing_state)
-        
+
         t_db.set_queued(t_id, 'lm')
         t = t_db.get_transaction(t_id)
         self.assertEqual(t.processing_state, 'waiting')
         self.assertEqual(t.task_state, TaskState.queued)
         self.assertEqual(t.last_message, 'lm')
-        
+
         t_db.close()
-        
+
     def test_peek_queued(self):
         engine = temp_db.get_temp_db()
         t_db = TransactionDB(engine)
@@ -221,21 +224,21 @@ class TestTransactionDB(unittest.TestCase):
         tr_1 = self._get_test_transaction()
         t_id_1 = t_db.create_transaction(tr_1)
         t_db.set_queued(t_id_1, '')
-    
+
         tr_2 = self._get_test_transaction()
         # just in case
         tr_2.start_date = tr_1.start_date + timedelta(seconds=1)
         t_id_2 = t_db.create_transaction(tr_2)
-        
+
         t_db.set_queued(t_id_2, '')
 
         t = t_db.peek_queued()
         self.assertEquals(t.transaction_id, t_id_1)
         t = t_db.peek_queued()
         self.assertEquals(t.transaction_id, t_id_1)
-        
+
         t_db.set_processing(t_id_1, 'spm', '', 50)
-        
+
         t = t_db.peek_queued()
         self.assertEquals(t.transaction_id, t_id_2)
 
@@ -318,11 +321,11 @@ class TestTransactionDB(unittest.TestCase):
 
         t = t_db.get_transaction(t_id)
         self.assertNotEqual(None, t)
-        
+
         ut = t_db.session.query(UserTransaction) \
             .filter_by(transaction_id=t.transaction_id) \
             .filter_by(user_id=user_id).first()
-        
+
         self.assertEqual(ut.user_id, user_id)
         self.assertEqual(t.transaction_id, ut.transaction_id)
 
@@ -348,7 +351,8 @@ class TestTransactionDB(unittest.TestCase):
         t_db.close()
 
     def test_migrations(self):
-        temp_folder = tempfile.mkdtemp(suffix='_test_migrations_transaction_db_')
+        temp_folder = tempfile.mkdtemp(
+            suffix='_test_migrations_transaction_db_')
         temp_db_path = os.path.join(temp_folder, 't_v1.db')
         shutil.copy('tests/fixtures/t_v1.db', temp_db_path)
         engine = create_engine('sqlite:///' + temp_db_path)
@@ -358,7 +362,7 @@ class TestTransactionDB(unittest.TestCase):
         t = Transaction()
         t_db.create_transaction(t)
         shutil.rmtree(temp_folder)
-        
+
     def test_json_serialization(self):
         t = self._get_test_transaction()
         t.task_state = TaskState.completed
@@ -368,6 +372,40 @@ class TestTransactionDB(unittest.TestCase):
         print(t.to_dict()['task_state'] == 'completed')
         self.assertTrue(t.to_dict()['task_state'] == 'completed')
         json.dumps(t.to_dict())
+
+    def test_retry_logic(self):
+        """test that our database retry logic works.
+        Raise exception randomly and perform the given task randomly,
+        such that retrying should eventually work"""
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(0, t.patient_consent)
+
+        orig_f = t_db._get_transaction_or_raise_exception
+
+        should_fail_once = True
+
+        def mocked_f(t_id):
+            nonlocal should_fail_once
+            if should_fail_once:
+                should_fail_once = False
+                # Raising this exception means it should be retried
+                raise OperationalError
+            return orig_f(t_id)
+
+        t_db._get_transaction_or_raise_exception = mocked_f
+
+        try:
+            t_db.set_patient_consent(t_id)
+        except Exception:
+            pass
+
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(1, t.patient_consent)
 
     def test_set_patient_consent(self):
         engine = temp_db.get_temp_db()
@@ -395,7 +433,7 @@ class TestTransactionDB(unittest.TestCase):
         user = t_db.session.query(User).get(user_id)
         self.assertEqual('Pere', user.name)
         self.assertTrue(user.hashed_password)
-    
+
     def test_remove_user_ok(self):
         """test that we can remove an existing user from the database"""
         engine = temp_db.get_temp_db()
@@ -406,7 +444,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.remove_user(user_id)
         user = t_db.session.query(User).get(user_id)
         self.assertFalse(user)
-        
+
     @unittest.expectedFailure
     def test_add_user_already_exists(self):
         """test that we can't add duplicate users by user name"""
@@ -415,7 +453,7 @@ class TestTransactionDB(unittest.TestCase):
         user_id = t_db.add_user('Pere', 'pwd')
         self.assertTrue(user_id >= 0)
         t_db.add_user('Pere', 'pwd')
-    
+
     def test_add_role_ok(self):
         """test that we can add a Role entity"""
         engine = temp_db.get_temp_db()
@@ -424,7 +462,7 @@ class TestTransactionDB(unittest.TestCase):
         role = t_db.session.query(Role).get('radiologist')
         self.assertEqual('whatever', role.description)
         self.assertEqual(128, role.permissions)
-            
+
     @unittest.expectedFailure
     def test_add_role_already_exists(self):
         """test that we can't add the same Role twice"""
@@ -446,25 +484,25 @@ class TestTransactionDB(unittest.TestCase):
         t_db.add_role('radiologist', 'whatever', 128)
 
         t_db.add_user_role(user_id, 'radiologist')
-        
+
         self.assertTrue(self.__user_has_role(t_db, user_id, 'radiologist'))
-        
+
     @unittest.expectedFailure
     def test_add_user_role_fail_on_non_existing_role(self):
         engine = temp_db.get_temp_db()
         t_db = TransactionDB(engine)
         user_id = t_db.add_user('Pere', 'pwd')
-        
+
         t_db.add_user_role(user_id, 'radiologist')
-    
-    @unittest.expectedFailure    
+
+    @unittest.expectedFailure
     def test_add_user_role_fail_on_non_existing_user(self):
         engine = temp_db.get_temp_db()
         t_db = TransactionDB(engine)
         t_db.add_role('radiologist', 'whatever')
 
         t_db.add_user_role(1, 'radiologist')
-    
+
     @unittest.expectedFailure
     def test_add_user_role_already_exists(self):
         """test that we can't assign twice the same role to a user"""
@@ -482,10 +520,10 @@ class TestTransactionDB(unittest.TestCase):
         t_db = TransactionDB(engine)
         user_id = t_db.add_user('Pere', 'pwd')
         t_db.add_role('radiologist', 'whatever', 128)
-        
+
         t_db.add_user_role(user_id, 'radiologist')
         self.assertTrue(self.__user_has_role(t_db, user_id, 'radiologist'))
-        t_db.revoke_user_role(user_id, 'radiologist')        
+        t_db.revoke_user_role(user_id, 'radiologist')
         self.assertFalse(self.__user_has_role(t_db, user_id, 'radiologist'))
 
     @unittest.expectedFailure
@@ -496,5 +534,5 @@ class TestTransactionDB(unittest.TestCase):
         t_db = TransactionDB(engine)
         user_id = t_db.add_user('Pere', 'pwd')
         t_db.add_role('radiologist', 'whatever')
-        
-        t_db.revoke_user_role(user_id, 'radiologist')        
+
+        t_db.revoke_user_role(user_id, 'radiologist')
