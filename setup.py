@@ -14,6 +14,7 @@ setup(
         'nose',
         'redis',
         'SQLAlchemy',
-        'passlib'
+        'passlib',
+        'tenacity'
     ]
 )
