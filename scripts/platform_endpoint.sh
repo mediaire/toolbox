@@ -1,5 +1,22 @@
 #!/bin/bash
 
+# ============================================================================
+# Command line tool that can be used to query the platform via command line
+# when authentication is enabled.
+# Basic Auth login is performed using the environment variables 
+# MD_PLATFORM_USER and MD_PLATFORM_PASSWORD.
+# It will fetch a JWT token using the provided credentials and use it with
+# Bearer authentication to execute the provided endpoint as argument.
+#
+# Example usage:
+# 
+# ./platform_endpoint.sh "/accounting_report"
+#
+# By default it assumes a GET request. To execute a POST request:
+#
+# ./platform_endpoint.sh "/accounting_report" POST
+# ============================================================================
+
 MD_PLATFORM_HOST=${MD_PLATFORM_HOST:-localhost}
 MD_PLATFORM_PORT=${MD_PLATFORM_PORT:-80}
 
@@ -27,6 +44,8 @@ else
 fi 
 
 ENDPOINT=$1
+METHOD=${2:-GET}
+
 if [[ $ENDPOINT = /* ]]; then
     echo -e "Checking validity of endpoint argument ... \e[32mOK\e[0m"
 else
@@ -52,5 +71,6 @@ echo -e "Checking credentials  ...  \e[32mOK\e[0m"
 JSON_TOKEN=$(curl -s -u $MD_PLATFORM_USER:$MD_PLATFORM_PASSWORD http://${MD_PLATFORM_HOST}:${MD_PLATFORM_PORT}/authenticate | jq -r '.token')
 echo ""
 
-ENDPOINT_REQUEST="curl -H \"Authorization: Bearer ${JSON_TOKEN}\" http://${MD_PLATFORM_HOST}:${MD_PLATFORM_PORT}${ENDPOINT}"
-echo $ENDPOINT_REQUEST
+ENDPOINT_REQUEST="curl -X ${METHOD} -H \"Authorization: Bearer ${JSON_TOKEN}\" http://${MD_PLATFORM_HOST}:${MD_PLATFORM_PORT}${ENDPOINT}"
+
+eval $ENDPOINT_REQUEST
