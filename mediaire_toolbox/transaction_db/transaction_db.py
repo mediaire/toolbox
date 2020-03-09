@@ -199,12 +199,10 @@ class TransactionDB:
         Returns
         -------
             A Transaction object, or None"""
-        # NOTE assumming that a transaction with low
-        # transactions_id is created earlier
         queued = self.session.query(Transaction) \
             .filter(Transaction.task_state == TaskState.queued) \
             .filter(Transaction.processing_state == 'waiting') \
-            .order_by(Transaction.transaction_id.asc())
+            .order_by(Transaction.start_date.asc())
         if queued:
             return queued.first()
         return None
@@ -239,9 +237,6 @@ class TransactionDB:
             t.task_state = TaskState.processing
             t.last_message = last_message
             t.task_progress = task_progress
-            if not t.start_date:
-                # set start date first time transaction was set to processing
-                t.start_date = datetime.datetime.utcnow()
             self.session.commit()
         except:
             self.session.rollback()
@@ -254,9 +249,6 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.failed
-            if not t.start_date:
-                # set start date if doesnt exist
-                t.start_date = datetime.datetime.utcnow()
             if not t.end_date:
                 t.end_date = datetime.datetime.utcnow()
             t.error = cause
@@ -276,9 +268,6 @@ class TransactionDB:
             t.task_state = TaskState.completed
             if not t.status or t.status == '':
                 t.status = 'unseen'
-            if not t.start_date:
-                # set start date if doesnt exist
-                t.start_date = datetime.datetime.utcnow()
             if not t.end_date:
                 t.end_date = datetime.datetime.utcnow()
             if clear_error:
