@@ -249,7 +249,8 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.failed
-            t.end_date = datetime.datetime.utcnow()
+            if not t.end_date:
+                t.end_date = datetime.datetime.utcnow()
             t.error = cause
             self.session.commit()
         except:
@@ -267,7 +268,8 @@ class TransactionDB:
             t.task_state = TaskState.completed
             if not t.status or t.status == '':
                 t.status = 'unseen'
-            t.end_date = datetime.datetime.utcnow()
+            if not t.end_date:
+                t.end_date = datetime.datetime.utcnow()
             if clear_error:
                 t.error = ''
             self.session.commit()

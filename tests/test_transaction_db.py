@@ -187,6 +187,29 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db.close()
 
+    def test_transaction_completed_end_date_immutable(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        # check that end date is None on creation
+        self.assertFalse(t.end_date)
+        # complete transaction
+        t_db.set_completed(t_id)
+        t = t_db.get_transaction(t_id)
+
+        self.assertTrue(t.end_date > t.start_date)
+        # reset to processing and then to complete again
+        end_date_1 = t.end_date
+        t_db.set_processing(t_id, '', '')
+        t_db.set_completed(t_id)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(end_date_1, t.end_date)
+
+        t_db.close()
+
     def test_transaction_archived(self):
         engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
