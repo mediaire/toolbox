@@ -1,3 +1,5 @@
+import os
+import signal
 import logging
 import traceback
 
@@ -13,6 +15,11 @@ logger = logging.getLogger(__name__)
 Common interface for creating operative daemons that consume from one of 
 our queues.
 """
+
+# All daemons run under this configured shared_data folder in docker-compose
+# It would be nicer to depend on md_commons to fetch this path, but then
+# we would have a circular dependency (toolbox -> commons -> toolbox).
+ASSUMED_SHARED_DATA = '/src/shared_data'
 
 
 class QueueDaemon(ABC):
@@ -45,6 +52,10 @@ class QueueDaemon(ABC):
         self.daemon_name = daemon_name
         self.config = config
         self.stopped = False
+        self.processing_t_id = None
+
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
 
     @abstractmethod
     def process_task(self, task):
@@ -53,6 +64,9 @@ class QueueDaemon(ABC):
         deserialized task here.
         """
         pass
+
+    def set_processing_t_id(self, t_id: int):
+        self.processing_t_id = t_id
 
     def run_once(self):
         logger.info('Waiting for items from queue {}'.format(
@@ -78,6 +92,8 @@ class QueueDaemon(ABC):
             return
 
         try:
+            if task.t_id:
+                self.set_processing_t_id(task.t_id)
             self.process_task(task)
             self.input_queue.complete(item)
         except Exception as e:
@@ -96,10 +112,28 @@ class QueueDaemon(ABC):
                 # if the task doesn't yet have a transactionid, default
                 # to error queue
                 self.input_queue.error(item, msg=msg)
+        finally:
+            self.set_processing_t_id(None)
 
     def run(self):
         while not self.stopped:
             self.run_once()
+
+    def exit_gracefully(self, _, __):
+        logger.info("Ok, no rush, people. Terminating gracefully now.")
+        if self.processing_t_id:
+            logger.warn('Processing t_id {} should be properly cancelled!'.
+                        format(self.processing_t_id))
+            if os.path.exists(ASSUMED_SHARED_DATA):
+                logger.warn('Writing a cancellation file in assumed '
+                            'shared data folder {}'.format(
+                                ASSUMED_SHARED_DATA))
+                c_file = os.path.join(ASSUMED_SHARED_DATA,
+                                      'cancel-{}'.format(self.processing_t_id))
+                if not os.path.exists(c_file):
+                    open(c_file, 'a').close()
+            else:
+                raise Exception('Transaction cancelled due to shutdown')
 
     def stop(self):
         self.stopped = True
