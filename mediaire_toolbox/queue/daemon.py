@@ -113,7 +113,7 @@ class QueueDaemon(ABC):
         while not self.stopped:
             self.run_once()
 
-    def exit_gracefully(self):
+    def exit_gracefully(self, _, __):
         logger.info("Ok, no rush, people. Terminating gracefully now.")
         if self.processing_t_id:
             logger.warn('Processing t_id {} should be properly cancelled!'.
