@@ -1,3 +1,4 @@
+import os
 import signal
 import logging
 import traceback
@@ -14,6 +15,11 @@ logger = logging.getLogger(__name__)
 Common interface for creating operative daemons that consume from one of 
 our queues.
 """
+
+# All daemons run under this configured shared_data folder in docker-compose
+# It would be nicer to depend on md_commons to fetch this path, but then
+# we would have a circular dependency (toolbox -> commons -> toolbox).
+ASSUMED_SHARED_DATA = '/src/shared_data'
 
 
 class QueueDaemon(ABC):
@@ -118,6 +124,16 @@ class QueueDaemon(ABC):
         if self.processing_t_id:
             logger.warn('Processing t_id {} should be properly cancelled!'.
                         format(self.processing_t_id))
+            if os.path.exists(ASSUMED_SHARED_DATA):
+                logger.warn('Writing a cancellation file in assumed '
+                            'shared data folder {}'.format(
+                                ASSUMED_SHARED_DATA))
+                c_file = os.path.join(ASSUMED_SHARED_DATA,
+                                      'cancel-{}'.format(self.processing_t_id))
+                if not os.path.exists(c_file):
+                    open(c_file, 'a').close()
+            else:
+                raise Exception('Transaction cancelled due to shutdown')
 
     def stop(self):
         self.stopped = True
