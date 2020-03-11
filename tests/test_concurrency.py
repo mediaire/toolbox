@@ -7,7 +7,8 @@ from multiprocessing import Process
 
 from sqlalchemy import create_engine
 
-from mediaire_toolbox.transaction_db.transaction_db import TransactionDB, TransactionDBException
+from mediaire_toolbox.transaction_db.transaction_db import TransactionDB, \
+    TransactionDBException
 from mediaire_toolbox.transaction_db.model import Transaction
 
 TEST_RANGE = 10
@@ -29,7 +30,8 @@ def _get_temp_db(temp_folder):
     return TransactionDB(
         create_engine(
             'sqlite:///' + os.path.join(temp_folder, 't.db') + 
-            '?check_same_thread=False', connect_args={'timeout': TIMEOUT}))
+            '?check_same_thread=False', connect_args={'timeout': TIMEOUT})
+        )
 
 
 class TestTransactionDBConcurrency(unittest.TestCase):
