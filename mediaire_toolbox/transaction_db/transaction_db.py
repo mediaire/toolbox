@@ -78,30 +78,34 @@ def migrate(session, engine, db_version):
             session, engine,
             from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
 
+
 class TransactionDB:
     """Connection to a DB of transactions where we can track status, failures, 
     elapsed time, etc."""
 
-    def __init__(self, engine):
+    def __init__(self, engine, create_db=True):
         """
         Parameters
         ----------
         engine: SQLAlchemy engine
+        create_db: bool
+            If true, database will be updated/created
         """
         self.session = scoped_session(sessionmaker(bind=engine))
-        create_all(engine)
-        db_version = self.session.query(
-            SchemaVersion).get(TRANSACTIONS_DB_SCHEMA_NAME)
-        if not db_version:
-            # it's the first time that we create the database
-            # therefore we don't have a row in the table 'schema_version'
-            # ... which indicates the version of the transactions DB
-            self.session.add(SchemaVersion())
-            self.session.commit()
-        else:
-            # check if the existing database is old, and if so migrate
-            if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
-                migrate(self.session, engine, db_version)
+        if create_db:
+            create_all(engine)
+            db_version = self.session.query(
+                SchemaVersion).get(TRANSACTIONS_DB_SCHEMA_NAME)
+            if not db_version:
+                # it's the first time that we create the database
+                # therefore we don't have a row in the table 'schema_version'
+                # ... which indicates the version of the transactions DB
+                self.session.add(SchemaVersion())
+                self.session.commit()
+            else:
+                # check if the existing database is old, and if so migrate
+                if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
+                    migrate(self.session, engine, db_version)
 
     def create_transaction(
             self, t: Transaction,
