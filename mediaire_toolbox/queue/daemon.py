@@ -1,3 +1,4 @@
+import signal
 import logging
 import traceback
 
@@ -45,6 +46,10 @@ class QueueDaemon(ABC):
         self.daemon_name = daemon_name
         self.config = config
         self.stopped = False
+        self.processing_t_id = None
+
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
 
     @abstractmethod
     def process_task(self, task):
@@ -53,6 +58,9 @@ class QueueDaemon(ABC):
         deserialized task here.
         """
         pass
+
+    def set_processing_t_id(self, t_id: int):
+        self.processing_t_id = t_id
 
     def run_once(self):
         logger.info('Waiting for items from queue {}'.format(
@@ -78,6 +86,8 @@ class QueueDaemon(ABC):
             return
 
         try:
+            if task.t_id:
+                self.set_processing_t_id(task.t_id)
             self.process_task(task)
             self.input_queue.complete(item)
         except Exception as e:
@@ -96,10 +106,18 @@ class QueueDaemon(ABC):
                 # if the task doesn't yet have a transactionid, default
                 # to error queue
                 self.input_queue.error(item, msg=msg)
+        finally:
+            self.set_processing_t_id(None)
 
     def run(self):
         while not self.stopped:
             self.run_once()
+
+    def exit_gracefully(self):
+        logger.info("Ok, no rush, people. Terminating gracefully now.")
+        if self.processing_t_id:
+            logger.warn('Processing t_id {} should be properly cancelled!'.
+                        format(self.processing_t_id))
 
     def stop(self):
         self.stopped = True
