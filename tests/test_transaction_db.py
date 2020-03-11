@@ -9,6 +9,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import create_engine
 
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
+from mediaire_toolbox.transaction_db.exceptions import TransactionDBException
 from mediaire_toolbox.transaction_db.model import (
     TaskState, Transaction, UserTransaction, User, Role, UserRole
 )
@@ -33,6 +34,18 @@ class TestTransactionDB(unittest.TestCase):
         t.study_id = 'S1'
         t.birth_date = datetime(1982, 10, 29)
         return t
+
+    def test_multi_session(self):
+        engine = temp_db.get_temp_db()
+        # no db created yet
+        t = Transaction()
+        t.name = 'Pere'
+
+        t_db_1 = TransactionDB(engine, False)
+        _ = TransactionDB(engine)
+        t_db_1.create_transaction(t)
+        t_1 = t_db_1.get_transaction(1)
+        self.assertEqual('Pere', t_1.name)
 
     def test_read_transaction_from_dict(self):
         d = {
