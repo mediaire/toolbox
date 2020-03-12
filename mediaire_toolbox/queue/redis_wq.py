@@ -150,12 +150,7 @@ class RedisWQ(object):
         key = self._get_limit_key(timeunit)
         rate_key = self._limit_key_prefix + str(key)
         result = self._db.get(rate_key)
-        logger.info(f"raw result {result}")
-        if result:
-            logger.info(f"int func {int(result)}")
-        result = int.from_bytes(result, sys.byteorder) if result else 0
-        logger.info(
-            f" query key {rate_key}, having a result {result}, compare it with limit {limit}")
+        result = int(result) if result else 0
         if result >= limit:
             return False
         expiry_time = self._get_limit_expirytime(timeunit)
