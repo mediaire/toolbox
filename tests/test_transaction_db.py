@@ -144,9 +144,31 @@ class TestTransactionDB(unittest.TestCase):
         self.assertEqual(tr_1.name, tr_2.name)
         self.assertEqual(tr_1.patient_id, tr_2.patient_id)
         self.assertEqual(tr_1.study_id, tr_2.study_id)
-        self.assertTrue(tr_2.start_date)
+        self.assertFalse(tr_2.start_date)
         self.assertEqual(t_id, tr_2.transaction_id)
         self.assertEqual(tr_2.task_state, TaskState.queued)
+
+        t_db.close()
+
+    def test_set_start_date(self):
+        # set start date at first processing
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        # the engine returns the ID of the newly created transaction
+        tr_2 = t_db.get_transaction(t_id)
+
+        self.assertFalse(tr_2.start_date)
+
+        t_db.set_processing(t_id, '', '')
+        tr_3 = t_db.get_transaction(t_id)
+        self.assertTrue(tr_3.start_date)
+
+        t_db.set_processing(t_id, '', '')
+        tr_4 = t_db.get_transaction(t_id)
+        self.assertEqual(tr_3.start_date, tr_4.start_date)
 
         t_db.close()
 
@@ -172,7 +194,7 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1)
-
+        t_db.set_processing(t_id, '', '')
         # to be called when a transaction fails
         t_db.set_failed(t_id, 'because it failed')
         t = t_db.get_transaction(t_id)
@@ -189,7 +211,7 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db = TransactionDB(engine)
         t_id = t_db.create_transaction(tr_1)
-
+        t_db.set_processing(t_id, '', '')
         # to be called when a transaction completes
         t_db.set_completed(t_id)
         t = t_db.get_transaction(t_id)
@@ -213,7 +235,6 @@ class TestTransactionDB(unittest.TestCase):
         t_db.set_completed(t_id)
         t = t_db.get_transaction(t_id)
 
-        self.assertTrue(t.end_date > t.start_date)
         # reset to processing and then to complete again
         end_date_1 = t.end_date
         t_db.set_processing(t_id, '', '')
@@ -263,7 +284,6 @@ class TestTransactionDB(unittest.TestCase):
 
         tr_2 = self._get_test_transaction()
         # just in case
-        tr_2.start_date = tr_1.start_date + timedelta(seconds=1)
         t_id_2 = t_db.create_transaction(tr_2)
 
         t_db.set_queued(t_id_2, '')

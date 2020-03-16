@@ -22,7 +22,7 @@ class Transaction(Base):
     patient_id = Column(String(255))
     name = Column(String(255))
     birth_date = Column(Date())
-    start_date = Column(DateTime(), default=datetime.datetime.utcnow)
+    start_date = Column(DateTime())
     end_date = Column(DateTime())
     task_state = Column(Enum(TaskState))
     processing_state = Column(String(255))
