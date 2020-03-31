@@ -120,14 +120,9 @@ echo "Bumping and tagging new version in Git..."
 git submodule init
 git submodule update
 git add **/__init__.py CHANGELOG.md || error_trap "Error issuing git add"
-git commit -m "Automatic version bump (release.sh)" || error_trap "Error issuing git commit"
+git commit -m "Version ${new_version}, automatic version bump" || error_trap "Error issuing git commit"
 git tag ${new_version} || error_trap "Error issuing git tag"
 git push origin master || error_trap "Error issuing git push"
 git push --tags || error_trap "Error issuing git push --tags"
-
-echo "Building and pushing new image..."
-make build || error_trap "Error building new image"
-`aws ecr get-login --no-include-email --region eu-central-1`
-make push || error_trap "Error pushing new image"
 
 echo "All operations done."
