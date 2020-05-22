@@ -64,7 +64,7 @@ class TestTransactionDB(unittest.TestCase):
         # test that date and datetimes are parsed correctly
         engine = temp_db.get_temp_db()
         t_db = TransactionDB(engine)
-        datetime_vars = ['start_date', 'end_date']
+        datetime_vars = ['start_date', 'end_date', 'data_uploaded']
         date_vars = ['birth_date']
         t = Transaction()
         for key in datetime_vars:
@@ -93,7 +93,8 @@ class TestTransactionDB(unittest.TestCase):
         # Test that these variables are read from the deserialization
         # function
         non_generic_vars = [
-            'start_date', 'end_date', 'birth_date', 'task_state']
+            'start_date', 'end_date', 'birth_date', 'task_state',
+            'data_uploaded']
         CALLABLES = types.FunctionType, types.MethodType
         var = [
             key for key, value in Transaction.__dict__.items()

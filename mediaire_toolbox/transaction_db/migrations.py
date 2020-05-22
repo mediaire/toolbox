@@ -36,6 +36,9 @@ MIGRATIONS = {
     9: [],
     10: [
         "ALTER TABLE transactions ADD COLUMN product_id INT DEFAULT 1"
+    ],
+    11: [
+        "ALTER TABLE transactions ADD COLUMN data_uploaded DATETIME"        
     ]
 }
 

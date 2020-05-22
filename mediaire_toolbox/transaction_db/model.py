@@ -11,6 +11,7 @@ from mediaire_toolbox import constants
 Base = declarative_base()
 
 
+# TODO Change to a dataclass when moving to Python 3.7
 class Transaction(Base):
 
     __tablename__ = 'transactions'
@@ -42,6 +43,18 @@ class Transaction(Base):
     archived = Column(Integer, default=0)
     patient_consent = Column(Integer, default=0)
     product_id = Column(Integer, default=1)
+    data_uploaded = Column(DateTime())
+    
+    def _datetime_to_str(self, dt):
+        return (
+            dt.strftime("%Y-%m-%d %H:%M:%S") if dt else None
+        )
+
+    def _str_to_datetime(self, str_):
+        return (
+            datetime.datetime.strptime(str_, "%Y-%m-%d %H:%M:%S") 
+            if str_ else None
+        )
 
     def to_dict(self):
         return { 'transaction_id': self.transaction_id,
@@ -50,10 +63,8 @@ class Transaction(Base):
                  'name': self.name,
                  'birth_date': self.birth_date.strftime("%d/%m/%Y") 
                     if self.birth_date else None,
-                 'start_date': self.start_date.strftime("%Y-%m-%d %H:%M:%S") 
-                    if self.start_date else None,
-                 'end_date': self.end_date.strftime("%Y-%m-%d %H:%M:%S") 
-                    if self.end_date else None,
+                 'start_date': self._datetime_to_str(self.start_date),
+                 'end_date': self._datetime_to_str(self.end_date),
                  'task_state': self.task_state.name if self.task_state else None,
                  'processing_state': self.processing_state,
                  'study_date': self.study_date,
@@ -67,7 +78,8 @@ class Transaction(Base):
                  'sequences': self.sequences,
                  'archived': self.archived,
                  'patient_consent': self.patient_consent,
-                 'product_id': self.product_id
+                 'product_id': self.product_id,
+                 'data_uploaded': self._datetime_to_str(self.data_uploaded)
                 }
 
     def read_dict(self, d: dict):
@@ -77,14 +89,10 @@ class Transaction(Base):
         self.patient_id = d.get('patient_id')
         self.name = d.get('name')
         birth_date = d.get('birth_date')
-        start_date = d.get('start_date')
-        end_date = d.get('end_date')
         self.birth_date = datetime.datetime.strptime(
             birth_date, "%d/%m/%Y") if birth_date else None
-        self.start_date = datetime.datetime.strptime(
-            start_date, "%Y-%m-%d %H:%M:%S") if start_date else None
-        self.end_date = datetime.datetime.strptime(
-            end_date, "%Y-%m-%d %H:%M:%S") if end_date else None
+        self.start_date = self._str_to_datetime(d.get('start_date'))
+        self.end_date = self._str_to_datetime(d.get('end_date'))
         self.task_state = TaskState[
             d.get('task_state')] if d.get('task_state') else None
         self.processing_state = d.get('processing_state')
@@ -100,6 +108,7 @@ class Transaction(Base):
         self.archived = d.get('archived')
         self.patient_consent = d.get('patient_consent')
         self.product_id = d.get('product_id')
+        self.data_uploaded = self._str_to_datetime(d.get('data_uploaded'))
         return self
 
     def __repr__(self):
