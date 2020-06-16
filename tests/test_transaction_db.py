@@ -94,7 +94,7 @@ class TestTransactionDB(unittest.TestCase):
         # function
         non_generic_vars = [
             'start_date', 'end_date', 'birth_date', 'task_state',
-            'data_uploaded']
+            'data_uploaded', 'creation_date']
         CALLABLES = types.FunctionType, types.MethodType
         var = [
             key for key, value in Transaction.__dict__.items()

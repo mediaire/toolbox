@@ -11,10 +11,9 @@ class MockRedis():
 
     def incr(self, key):
         if key in self.hashmap:
-            new_value = int.from_bytes(self.hashmap[key], sys.byteorder) + 1
-            self.hashmap[key] = new_value.to_bytes(1, sys.byteorder)
+            self.hashmap[key] = key + 1
         else:
-            self.hashmap[key] = (1).to_bytes(1, sys.byteorder)
+            self.hashmap[key] = 1
         return self.hashmap[key]
 
     def get(self, key):
