@@ -151,6 +151,14 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db.close()
 
+    def test_set_creation_date(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        tr_2 = t_db.get_transaction(t_id)
+        self.assertTrue(tr_2.creation_date)
+
     def test_set_start_date(self):
         # set start date at first processing
         engine = temp_db.get_temp_db()

@@ -123,6 +123,8 @@ class TransactionDB:
         """
         try:
             t.task_state = TaskState.queued
+            if not t.creation_date:
+                t.creation_date = datetime.datetime.utcnow()
             if product_id:
                 t.product_id = product_id
             self.session.add(t)

@@ -39,6 +39,9 @@ MIGRATIONS = {
     ],
     11: [
         "ALTER TABLE transactions ADD COLUMN data_uploaded DATETIME"        
+    ],
+    12: [
+        "ALTER TABLE transactions ADD COLUMN creation_date DATETIME"
     ]
 }
 
