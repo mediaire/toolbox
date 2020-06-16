@@ -110,7 +110,7 @@ class DataCleaner:
         entries = []
         for entry in os.scandir(path):
             # recursion when entry is a subfolder
-            if entry.is_dir():
+            if entry.is_dir(follow_symlinks=False):
                 entries += DataCleaner.scan_dir(os.path.join(path, entry.name))
             elif entry.is_file(follow_symlinks=False):
                 entries.append(os.path.join(path, entry.name))
