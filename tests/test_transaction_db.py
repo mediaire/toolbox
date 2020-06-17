@@ -94,7 +94,7 @@ class TestTransactionDB(unittest.TestCase):
         # function
         non_generic_vars = [
             'start_date', 'end_date', 'birth_date', 'task_state',
-            'data_uploaded']
+            'data_uploaded', 'creation_date']
         CALLABLES = types.FunctionType, types.MethodType
         var = [
             key for key, value in Transaction.__dict__.items()
@@ -150,6 +150,14 @@ class TestTransactionDB(unittest.TestCase):
         self.assertEqual(tr_2.task_state, TaskState.queued)
 
         t_db.close()
+
+    def test_set_creation_date(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        tr_2 = t_db.get_transaction(t_id)
+        self.assertTrue(tr_2.creation_date)
 
     def test_set_start_date(self):
         # set start date at first processing

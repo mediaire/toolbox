@@ -25,11 +25,13 @@ class Transaction(Base):
     birth_date = Column(Date())
     start_date = Column(DateTime())
     end_date = Column(DateTime())
+    # time when the transaction was created
+    creation_date = Column(DateTime())
     task_state = Column(Enum(TaskState))
     processing_state = Column(String(255))
     last_message = Column(String)
     error = Column(String())
-    # new platform status: unseen / reviewed / sent_to_pacs 
+    # new platform status: unseen / reviewed / sent_to_pacs
     status = Column(String())
     # indexed from DICOM header, for free text search
     institution = Column(String())
@@ -44,7 +46,7 @@ class Transaction(Base):
     patient_consent = Column(Integer, default=0)
     product_id = Column(Integer, default=1)
     data_uploaded = Column(DateTime())
-    
+
     def _datetime_to_str(self, dt):
         return (
             dt.strftime("%Y-%m-%d %H:%M:%S") if dt else None
@@ -52,7 +54,7 @@ class Transaction(Base):
 
     def _str_to_datetime(self, str_):
         return (
-            datetime.datetime.strptime(str_, "%Y-%m-%d %H:%M:%S") 
+            datetime.datetime.strptime(str_, "%Y-%m-%d %H:%M:%S")
             if str_ else None
         )
 
@@ -61,10 +63,11 @@ class Transaction(Base):
                  'study_id': self.study_id,
                  'patient_id': self.patient_id,
                  'name': self.name,
-                 'birth_date': self.birth_date.strftime("%d/%m/%Y") 
+                 'birth_date': self.birth_date.strftime("%d/%m/%Y")
                     if self.birth_date else None,
                  'start_date': self._datetime_to_str(self.start_date),
                  'end_date': self._datetime_to_str(self.end_date),
+                 'creation_date': self._datetime_to_str(self.creation_date),
                  'task_state': self.task_state.name if self.task_state else None,
                  'processing_state': self.processing_state,
                  'study_date': self.study_date,
@@ -93,6 +96,7 @@ class Transaction(Base):
             birth_date, "%d/%m/%Y") if birth_date else None
         self.start_date = self._str_to_datetime(d.get('start_date'))
         self.end_date = self._str_to_datetime(d.get('end_date'))
+        self.creation_date = self._str_to_datetime(d.get('creation_date'))
         self.task_state = TaskState[
             d.get('task_state')] if d.get('task_state') else None
         self.processing_state = d.get('processing_state')
@@ -117,22 +121,22 @@ class Transaction(Base):
 
 
 class User(Base):
-    
+
     """for multi-tenant pipelines, users might be required"""
     __tablename__ = 'users'
-        
+
     id = Column(Integer, Sequence('id'), primary_key=True)
     name = Column(String(255), unique=True)
     hashed_password = Column(String(128))
     added = Column(DateTime(), default=datetime.datetime.utcnow)
-    
+
     @staticmethod
     def password_hash(password):
         return pwd_context.hash(password)
 
     def verify_password(self, password):
         return pwd_context.verify(password, self.hashed_password)
-    
+
     def to_dict(self):
         return { 'id': self.id,
                  'name': self.name,
@@ -150,15 +154,15 @@ class User(Base):
 
 
 class UserTransaction(Base):
-    
+
     """for multi-tenant pipelines, transactions might be associated with users"""
     __tablename__ = 'users_transactions'
-        
+
     user_id = Column(Integer, ForeignKey('users.id'),
                      primary_key=True)
     transaction_id = Column(Integer, ForeignKey('transactions.transaction_id'),
                             primary_key=True)
-    
+
     def to_dict(self):
         return { 'user_id': self.user_id,
                  'transaction_id': self.transaction_id }
@@ -170,16 +174,16 @@ class UserTransaction(Base):
 
 
 class UserRole(Base):
-    
-    """for multi-tenant pipelines, users might have different roles in the 
+
+    """for multi-tenant pipelines, users might have different roles in the
     associated platform"""
     __tablename__ = 'users_roles'
-        
+
     user_id = Column(Integer, ForeignKey('users.id'),
                      primary_key=True)
     role_id = Column(String(64), ForeignKey('roles.role_id'),
                      primary_key=True)
-    
+
     def to_dict(self):
         return { 'user_id': self.user_id,
                  'role_id': self.role_id }
@@ -188,11 +192,11 @@ class UserRole(Base):
         self.user_id = d.get('user_id')
         self.role_id = d.get('role_id')
         return self
-    
-    
+
+
 class Role(Base):
 
-    """for multi-tenant pipelines, users might have different roles in the 
+    """for multi-tenant pipelines, users might have different roles in the
     associated platform"""
     __tablename__ = 'roles'
 
@@ -201,7 +205,7 @@ class Role(Base):
     description = Column(String)
     # encoded permissions for this role, 1 bit for each
     permissions = Column(Integer)
-    
+
     def to_dict(self):
         return {'role_id': self.user_id}
 
@@ -211,14 +215,14 @@ class Role(Base):
 
 
 class SchemaVersion(Base):
-    
+
     __tablename__ = 'schema_version'
-    
+
     schema = Column(String(255), primary_key=True,
                     default=constants.TRANSACTIONS_DB_SCHEMA_NAME)
     schema_version = Column(Integer,
                             default=constants.TRANSACTIONS_DB_SCHEMA_VERSION)
 
-    
+
 def create_all(engine):
     Base.metadata.create_all(bind=engine)
