@@ -47,15 +47,15 @@ def migrate_scripts(session, engine, current_version, target_version):
 
 def migrate(session, engine, db_version):
     """Implementing database migration using a similar idea to Flyway:
-    
+
     https://flywaydb.org/getstarted/firststeps/commandline
-    
+
     We store the schema version in the database and we apply migrations in
     increasing order until we meet the current version.
     There are plenty of schema migration tools but at this point it's not clear
     if we need to add the complexity of such tools on our stack. So we do it
     ourselves here.
-    
+
     After migrating with sql commands (changing dababase schema),
     we also run python scripts to index values parsed from the dicom header.
     Note that the schema_version does not correspond to the indexed values:
@@ -80,7 +80,7 @@ def migrate(session, engine, db_version):
 
 
 class TransactionDB:
-    """Connection to a DB of transactions where we can track status, failures, 
+    """Connection to a DB of transactions where we can track status, failures,
     elapsed time, etc."""
 
     def __init__(self, engine, create_db=True):
@@ -174,10 +174,10 @@ class TransactionDB:
     def set_queued(self,
                    id_: int,
                    last_message: str = None):
-        """queues the Transaction and sets its processing state as 
+        """queues the Transaction and sets its processing state as
         'waiting'. This signals consumers that this transaction shouldn't
         continue and will be polled in the future.
-        
+
         Parameters
         ----------
         id_
@@ -198,10 +198,10 @@ class TransactionDB:
     @t_db_retry
     def peek_queued(self):
         """Peeks the oldest queued transaction from the database, if any.
-        Note that this is a peek, not a poll operation, so unless the 
+        Note that this is a peek, not a poll operation, so unless the
         transaction is moved into processing state, it will be returned
         again on a subsequent call.
-        
+
         Returns
         -------
             A Transaction object, or None"""
@@ -224,7 +224,7 @@ class TransactionDB:
                        ):
         """to be called when a transaction changes from one processing task
         to another
-        
+
         Parameters
         ----------
         id_
@@ -275,7 +275,7 @@ class TransactionDB:
     def set_completed(self, id_: int, clear_error: bool=True):
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
-        End_date automatically adjusted. Status is automatically set to 
+        End_date automatically adjusted. Status is automatically set to
         'unseen' (unless it was already reviewed)."""
         try:
             t = self._get_transaction_or_raise_exception(id_)
@@ -381,12 +381,22 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    def set_billable(self, id_: int, billable):
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.billable = billable
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+    @t_db_retry
     def add_user(self, name, password):
         """For multi-tenant transaction DBs, add a new user to it.
-        
+
         The provided (clear) password will be hashed in the database.
         Returns the user ID set by the database upon successful insert.
-        
+
         TransactionDBException will be thrown if a user with the same
         name already exists."""
         try:
@@ -410,7 +420,7 @@ class TransactionDB:
                  permissions: int):
         """For multi-tenant transaction DBs, where users have certain roles,
         add a new role in the database.
-        
+
         TransactionDBException will be thrown if the role already exists."""
         try:
             role = self.session.query(Role).filter_by(role_id=role_id).first()
@@ -439,18 +449,18 @@ class TransactionDB:
     def add_user_role(self, user_id: int, role_id: str):
         """
         Assign a role to a user.
-        
+
         Parameters:
         -----------
             user_id: the numeric user ID returned by the database from a user
               which already exists in the Users table.
             role_id: the role identifier (string) which should exist in the
               roles table already.
-        
+
         TransactionDBException will be thrown if the user-role assignment
         already exists.
 
-        Other exceptions will be thrown by the database if the user doesn't 
+        Other exceptions will be thrown by the database if the user doesn't
         exist or the role doesn't exist.
         """
         try:
@@ -474,14 +484,14 @@ class TransactionDB:
     @t_db_retry
     def revoke_user_role(self, user_id: int, role_id: str):
         """Revoke a role from a user.
-        
+
         Parameters:
         -----------
             user_id: the numeric user ID returned by the database from a user
               which already exists in the Users table.
             role_id: the role identifier (string) which should exist in the
               roles table already.
-                     
+
         TransactionDBException will be thrown if the user-role assignment
         didn't exist in the first place.
         """
