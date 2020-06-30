@@ -46,6 +46,7 @@ class Transaction(Base):
     patient_consent = Column(Integer, default=0)
     product_id = Column(Integer, default=1)
     data_uploaded = Column(DateTime())
+    billable = Column(String())
 
     def _datetime_to_str(self, dt):
         return (
@@ -82,7 +83,8 @@ class Transaction(Base):
                  'archived': self.archived,
                  'patient_consent': self.patient_consent,
                  'product_id': self.product_id,
-                 'data_uploaded': self._datetime_to_str(self.data_uploaded)
+                 'data_uploaded': self._datetime_to_str(self.data_uploaded),
+                 'billable': self.billable
                 }
 
     def read_dict(self, d: dict):
@@ -113,6 +115,7 @@ class Transaction(Base):
         self.patient_consent = d.get('patient_consent')
         self.product_id = d.get('product_id')
         self.data_uploaded = self._str_to_datetime(d.get('data_uploaded'))
+        self.billable = d.get('billable')
         return self
 
     def __repr__(self):

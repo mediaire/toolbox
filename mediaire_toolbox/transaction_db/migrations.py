@@ -42,6 +42,9 @@ MIGRATIONS = {
     ],
     12: [
         "ALTER TABLE transactions ADD COLUMN creation_date DATETIME"
+    ],
+    13: [
+        "ALTER TABLE transactions ADD COLUMN billable TEXT"
     ]
 }
 
