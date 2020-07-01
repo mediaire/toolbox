@@ -203,16 +203,24 @@ class TransactionDB:
         transaction is moved into processing state, it will be returned
         again on a subsequent call.
 
+        Parameters
+        ----------
+        processing_state: str
+            filter by processing_state if not none
+
         Returns
         -------
             A Transaction object, or None"""
         # NOTE assumming that a transaction with low
         # transactions_id is created earlier
-        queued = self.session.query(Transaction) \
+        query = self.session.query(Transaction) \
             .filter(Transaction.task_state == TaskState.queued) \
-            .filter(Transaction.processing_state == processing_state) \
-            .filter(Transaction.archived == 0) \
-            .order_by(Transaction.transaction_id.asc())
+            .filter(Transaction.archived == 0)
+        if processing_state:
+            query = query.filter(
+                Transaction.processing_state == processing_state)
+
+        queued = query.order_by(Transaction.transaction_id.asc())
         if queued:
             return queued.first()
         return None
