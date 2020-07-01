@@ -105,7 +105,7 @@ class TransactionDB:
             If true, database will be updated/created
         """
         # lock for atomic operations
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         self.session = scoped_session(sessionmaker(bind=engine))
         if create_db:
