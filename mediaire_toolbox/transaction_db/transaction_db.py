@@ -173,7 +173,8 @@ class TransactionDB:
     @t_db_retry
     def set_queued(self,
                    id_: int,
-                   last_message: str = None):
+                   last_message: str = None,
+                   processing_state: str = 'waiting'):
         """queues the Transaction and sets its processing state as
         'waiting'. This signals consumers that this transaction shouldn't
         continue and will be polled in the future.
@@ -187,7 +188,7 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.queued
-            t.processing_state = 'waiting'
+            t.processing_state = processing_state
             if last_message:
                 t.last_message = last_message
             self.session.commit()
@@ -196,7 +197,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
-    def peek_queued(self):
+    def peek_queued(self, processing_state='waiting'):
         """Peeks the oldest queued transaction from the database, if any.
         Note that this is a peek, not a poll operation, so unless the
         transaction is moved into processing state, it will be returned
@@ -209,7 +210,8 @@ class TransactionDB:
         # transactions_id is created earlier
         queued = self.session.query(Transaction) \
             .filter(Transaction.task_state == TaskState.queued) \
-            .filter(Transaction.processing_state == 'waiting') \
+            .filter(Transaction.processing_state == processing_state) \
+            .filter(Transaction.archived == 0) \
             .order_by(Transaction.transaction_id.asc())
         if queued:
             return queued.first()

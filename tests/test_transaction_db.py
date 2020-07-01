@@ -289,22 +289,24 @@ class TestTransactionDB(unittest.TestCase):
 
         tr_1 = self._get_test_transaction()
         t_id_1 = t_db.create_transaction(tr_1)
-        t_db.set_queued(t_id_1, '')
+        t_db.set_queued(t_id_1, '', 'wait')
 
         tr_2 = self._get_test_transaction()
         # just in case
         t_id_2 = t_db.create_transaction(tr_2)
 
-        t_db.set_queued(t_id_2, '')
+        t_db.set_queued(t_id_2, '', 'wait')
 
-        t = t_db.peek_queued()
+        self.assertFalse(t_db.peek_queued('non_wait'))
+
+        t = t_db.peek_queued('wait')
         self.assertEquals(t.transaction_id, t_id_1)
-        t = t_db.peek_queued()
+        t = t_db.peek_queued('wait')
         self.assertEquals(t.transaction_id, t_id_1)
 
         t_db.set_processing(t_id_1, 'spm', '', 50)
 
-        t = t_db.peek_queued()
+        t = t_db.peek_queued('wait')
         self.assertEquals(t.transaction_id, t_id_2)
 
         t_db.close()
