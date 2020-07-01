@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -79,6 +80,18 @@ def migrate(session, engine, db_version):
             from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
 
 
+def lock(func):
+    """Decorator for lock management"""
+
+    def wrapper(self, *args, **kwargs):
+        try:
+            self.lock.acquire()
+            return func(self, *args, **kwargs)
+        finally:
+            self.lock.release()
+    return wrapper
+
+
 class TransactionDB:
     """Connection to a DB of transactions where we can track status, failures,
     elapsed time, etc."""
@@ -91,6 +104,9 @@ class TransactionDB:
         create_db: bool
             If true, database will be updated/created
         """
+        # lock for atomic operations
+        self.lock = threading.Lock()
+
         self.session = scoped_session(sessionmaker(bind=engine))
         if create_db:
             create_all(engine)
@@ -107,6 +123,7 @@ class TransactionDB:
                 if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
                     migrate(self.session, engine, db_version)
 
+    @lock
     def create_transaction(
             self, t: Transaction,
             user_id=None, product_id=None) -> int:
@@ -123,6 +140,7 @@ class TransactionDB:
         """
         try:
             t.task_state = TaskState.queued
+            t.processing_state = 'waiting'
             if not t.creation_date:
                 t.creation_date = datetime.datetime.utcnow()
             if product_id:
@@ -152,6 +170,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def get_transaction(self, id_: int) -> Transaction:
         try:
             return self._get_transaction_or_raise_exception(id_)
@@ -171,6 +190,7 @@ class TransactionDB:
                 """ % id)
 
     @t_db_retry
+    @lock
     def set_queued(self,
                    id_: int,
                    last_message: str = None,
@@ -197,6 +217,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def peek_queued(self, processing_state='waiting'):
         """Peeks the oldest queued transaction from the database, if any.
         Note that this is a peek, not a poll operation, so unless the
@@ -226,6 +247,7 @@ class TransactionDB:
         return None
 
     @t_db_retry
+    @lock
     def set_processing(self,
                        id_: int,
                        new_processing_state: str,
@@ -264,6 +286,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_failed(self, id_: int, cause: str):
         """to be called when a transaction fails. Save error information
         from 'cause'"""
@@ -282,6 +305,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_completed(self, id_: int, clear_error: bool=True):
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
@@ -305,6 +329,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_status(self, id_: int, status: str):
         """to be called e.g. when the radiologist visits the results of a study
         in the new platform ('reviewed') or the report is sent to the PACS
@@ -318,6 +343,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_skipped(self, id_: int, cause: str=None):
         """to be called when the transaction is skipped. Save skip information
         from 'cause'"""
@@ -332,6 +358,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_cancelled(self, id_: int, cause: str=None):
         """to be called when the transaction is cancelled. Save cancel information
         from 'cause'"""
@@ -346,6 +373,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_archived(self, id_: int):
         """to be called when the transaction is archived."""
         try:
@@ -357,6 +385,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_last_message(self, id_: int, last_message: str):
         """Updates the last_message field of the transaction
         with the given string."""
@@ -369,6 +398,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_patient_consent(self, id_: int):
         """Mark this transaction ID with data usage patient consent"""
         try:
@@ -380,6 +410,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def unset_patient_consent(self, id_: int):
         """Mark this transaction ID with NO data usage patient consent"""
         try:
@@ -391,6 +422,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_billable(self, id_: int, billable):
         try:
             t = self._get_transaction_or_raise_exception(id_)
