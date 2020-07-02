@@ -1,4 +1,5 @@
 import logging
+import json
 import threading
 
 from sqlalchemy.ext.automap import automap_base
@@ -126,7 +127,8 @@ class TransactionDB:
     @lock
     def create_transaction(
             self, t: Transaction,
-            user_id=None, product_id=None) -> int:
+            user_id=None, product_id=None,
+            processing_state='waiting') -> int:
         """will set the provided transaction object as queued,
         add it to the DB and return the transaction id.
 
@@ -140,7 +142,7 @@ class TransactionDB:
         """
         try:
             t.task_state = TaskState.queued
-            t.processing_state = 'waiting'
+            t.processing_state = processing_state
             if not t.creation_date:
                 t.creation_date = datetime.datetime.utcnow()
             if product_id:
@@ -159,6 +161,14 @@ class TransactionDB:
                 self.session.add(ut)
             self.session.commit()
 
+            # set the transaction id in the task object
+            if t.last_message:
+                try:
+                    lm = json.loads(t.last_message)
+                    lm['t_id'] = t.transaction_id
+                    t.last_message = json.dumps(lm)
+                except Exception:
+                    pass
             # index.index_institution(t)
             index.index_sequences(t)
             self.session.commit()

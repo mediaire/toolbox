@@ -133,6 +133,23 @@ class TestTransactionDB(unittest.TestCase):
         self.assertEqual('series_t1_1;series_t2_1',
                          tr_2.sequences)
 
+    def test_create_transaction_lm(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+        tr_1.last_message = json.dumps({
+            't_id': None,
+            'data': {
+                'dicom_info': {
+                    't1': {'header': {'SeriesDescription': 'series_t1_1'}},
+                    't2': {'header': {'SeriesDescription': 'series_t2_1'}}}
+            }
+        })
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        tr_2 = t_db.get_transaction(t_id)
+
+        self.assertEqual(t_id, json.loads(tr_2.last_message)['t_id'])
+
     def test_get_transaction(self):
         engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
@@ -264,23 +281,6 @@ class TestTransactionDB(unittest.TestCase):
         t_db.set_archived(t_id)
         t = t_db.get_transaction(t_id)
         self.assertEqual(t.archived, 1)
-        t_db.close()
-
-    def test_transaction_queued(self):
-        engine = temp_db.get_temp_db()
-        tr_1 = self._get_test_transaction()
-
-        t_db = TransactionDB(engine)
-        t_id = t_db.create_transaction(tr_1)
-        t = t_db.get_transaction(t_id)
-        self.assertFalse(t.processing_state)
-
-        t_db.set_queued(t_id, 'lm')
-        t = t_db.get_transaction(t_id)
-        self.assertEqual(t.processing_state, 'waiting')
-        self.assertEqual(t.task_state, TaskState.queued)
-        self.assertEqual(t.last_message, 'lm')
-
         t_db.close()
 
     def test_peek_queued(self):
