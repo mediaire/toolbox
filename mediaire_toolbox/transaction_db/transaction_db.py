@@ -1,4 +1,6 @@
 import logging
+import json
+import threading
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -79,6 +81,18 @@ def migrate(session, engine, db_version):
             from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
 
 
+def lock(func):
+    """Decorator for lock management"""
+
+    def wrapper(self, *args, **kwargs):
+        try:
+            self.lock.acquire()
+            return func(self, *args, **kwargs)
+        finally:
+            self.lock.release()
+    return wrapper
+
+
 class TransactionDB:
     """Connection to a DB of transactions where we can track status, failures,
     elapsed time, etc."""
@@ -91,6 +105,9 @@ class TransactionDB:
         create_db: bool
             If true, database will be updated/created
         """
+        # lock for atomic operations
+        self.lock = threading.RLock()
+
         self.session = scoped_session(sessionmaker(bind=engine))
         if create_db:
             create_all(engine)
@@ -107,9 +124,11 @@ class TransactionDB:
                 if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
                     migrate(self.session, engine, db_version)
 
+    @lock
     def create_transaction(
             self, t: Transaction,
-            user_id=None, product_id=None) -> int:
+            user_id=None, product_id=None,
+            processing_state='waiting') -> int:
         """will set the provided transaction object as queued,
         add it to the DB and return the transaction id.
 
@@ -123,6 +142,7 @@ class TransactionDB:
         """
         try:
             t.task_state = TaskState.queued
+            t.processing_state = processing_state
             if not t.creation_date:
                 t.creation_date = datetime.datetime.utcnow()
             if product_id:
@@ -141,6 +161,14 @@ class TransactionDB:
                 self.session.add(ut)
             self.session.commit()
 
+            # set the transaction id in the task object
+            if t.last_message:
+                try:
+                    lm = json.loads(t.last_message)
+                    lm['t_id'] = t.transaction_id
+                    t.last_message = json.dumps(lm)
+                except Exception:
+                    pass
             # index.index_institution(t)
             index.index_sequences(t)
             self.session.commit()
@@ -152,6 +180,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def get_transaction(self, id_: int) -> Transaction:
         try:
             return self._get_transaction_or_raise_exception(id_)
@@ -171,9 +200,11 @@ class TransactionDB:
                 """ % id)
 
     @t_db_retry
+    @lock
     def set_queued(self,
                    id_: int,
-                   last_message: str = None):
+                   last_message: str = None,
+                   processing_state: str = 'waiting'):
         """queues the Transaction and sets its processing state as
         'waiting'. This signals consumers that this transaction shouldn't
         continue and will be polled in the future.
@@ -187,7 +218,7 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.task_state = TaskState.queued
-            t.processing_state = 'waiting'
+            t.processing_state = processing_state
             if last_message:
                 t.last_message = last_message
             self.session.commit()
@@ -196,26 +227,37 @@ class TransactionDB:
             raise
 
     @t_db_retry
-    def peek_queued(self):
+    @lock
+    def peek_queued(self, processing_state='waiting'):
         """Peeks the oldest queued transaction from the database, if any.
         Note that this is a peek, not a poll operation, so unless the
         transaction is moved into processing state, it will be returned
         again on a subsequent call.
+
+        Parameters
+        ----------
+        processing_state: str
+            filter by processing_state if not none
 
         Returns
         -------
             A Transaction object, or None"""
         # NOTE assumming that a transaction with low
         # transactions_id is created earlier
-        queued = self.session.query(Transaction) \
+        query = self.session.query(Transaction) \
             .filter(Transaction.task_state == TaskState.queued) \
-            .filter(Transaction.processing_state == 'waiting') \
-            .order_by(Transaction.transaction_id.asc())
+            .filter(Transaction.archived == 0)
+        if processing_state:
+            query = query.filter(
+                Transaction.processing_state == processing_state)
+
+        queued = query.order_by(Transaction.transaction_id.asc())
         if queued:
             return queued.first()
         return None
 
     @t_db_retry
+    @lock
     def set_processing(self,
                        id_: int,
                        new_processing_state: str,
@@ -254,6 +296,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_failed(self, id_: int, cause: str):
         """to be called when a transaction fails. Save error information
         from 'cause'"""
@@ -272,6 +315,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_completed(self, id_: int, clear_error: bool=True):
         """to be called when the transaction completes successfully.
         Error field will be set to '' only if clear_error = True.
@@ -295,6 +339,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_status(self, id_: int, status: str):
         """to be called e.g. when the radiologist visits the results of a study
         in the new platform ('reviewed') or the report is sent to the PACS
@@ -308,6 +353,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_skipped(self, id_: int, cause: str=None):
         """to be called when the transaction is skipped. Save skip information
         from 'cause'"""
@@ -322,6 +368,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_cancelled(self, id_: int, cause: str=None):
         """to be called when the transaction is cancelled. Save cancel information
         from 'cause'"""
@@ -336,6 +383,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_archived(self, id_: int):
         """to be called when the transaction is archived."""
         try:
@@ -347,6 +395,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_last_message(self, id_: int, last_message: str):
         """Updates the last_message field of the transaction
         with the given string."""
@@ -359,6 +408,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_patient_consent(self, id_: int):
         """Mark this transaction ID with data usage patient consent"""
         try:
@@ -370,6 +420,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def unset_patient_consent(self, id_: int):
         """Mark this transaction ID with NO data usage patient consent"""
         try:
@@ -381,6 +432,7 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
     def set_billable(self, id_: int, billable):
         try:
             t = self._get_transaction_or_raise_exception(id_)
