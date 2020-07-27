@@ -92,7 +92,7 @@ class TestMigration(unittest.TestCase):
         self.assertEqual('T1_sequence;T2_sequence', tr_2.sequences)
 
         t_db.close()
-        
+
     def test_migrate_study_date(self):
         engine = self._get_temp_db(4)
         t_db = TransactionDB(engine)
@@ -115,8 +115,115 @@ class TestMigration(unittest.TestCase):
         model = get_transaction_model(engine)
         migrations.migrate_study_date(t_db.session, model)
         t_db.session.commit()
-        
+
         tr_2 = t_db.get_transaction(t_id)
         self.assertEqual('20190101', tr_2.study_date)
 
+        t_db.close()
+
+    def test_migrate_version(self):
+        engine = self._get_temp_db(5)
+        t_db = TransactionDB(engine)
+        last_message = {'data': {'version': '2.2.1'}}
+        tr_1 = Transaction()
+        tr_1.last_message = json.dumps(last_message)
+        t_id = t_db.create_transaction(tr_1)
+        tr_1 = t_db.get_transaction(t_id)
+        # by default TransactionsDB doesn't set this field
+        self.assertEqual(None, tr_1.version)
+
+        # execute migrate python script
+        model = get_transaction_model(engine)
+        migrations.migrate_version(t_db.session, model)
+        t_db.session.commit()
+
+        tr_2 = t_db.get_transaction(t_id)
+        self.assertEqual('2.2.1', tr_2.version)
+        t_db.close()
+
+    def test_migrate_report_type(self):
+        engine = self._get_temp_db(5)
+        t_db = TransactionDB(engine)
+        last_message = {'data': {'report_pdf_paths': {'mdbrain_nd': 'path1'}}}
+        tr_1 = Transaction()
+        tr_1.last_message = json.dumps(last_message)
+        t_id = t_db.create_transaction(tr_1)
+        tr_1 = t_db.get_transaction(t_id)
+        # by default TransactionsDB doesn't set this field
+        self.assertEqual(None, tr_1.report_type)
+
+        # execute migrate python script
+        model = get_transaction_model(engine)
+        migrations.migrate_report_types(t_db.session, model)
+        t_db.session.commit()
+
+        tr_2 = t_db.get_transaction(t_id)
+        self.assertEqual('mdbrain_nd', tr_2.report_type)
+        t_db.close()
+
+    def test_migrate_report_type_2(self):
+        engine = self._get_temp_db(5)
+        t_db = TransactionDB(engine)
+        last_message = {
+            'data': {
+                'report_pdf_paths': {'mdbrain_nd': 'path1', 'mdbrain_ms': 'path2'}}}
+        tr_1 = Transaction()
+        tr_1.last_message = json.dumps(last_message)
+        t_id = t_db.create_transaction(tr_1)
+        tr_1 = t_db.get_transaction(t_id)
+        # by default TransactionsDB doesn't set this field
+        self.assertEqual(None, tr_1.report_type)
+
+        # execute migrate python script
+        model = get_transaction_model(engine)
+        migrations.migrate_report_types(t_db.session, model)
+        t_db.session.commit()
+
+        tr_2 = t_db.get_transaction(t_id)
+        self.assertEqual('mdbrain_ms;mdbrain_nd', tr_2.report_type)
+        t_db.close()
+
+    def test_migrate_report_qa(self):
+        engine = self._get_temp_db(5)
+        t_db = TransactionDB(engine)
+        last_message = {
+            'data': {'report_qa_score_outcomes': {'mdbrain_nd': 'good'}}}
+        tr_1 = Transaction()
+        tr_1.last_message = json.dumps(last_message)
+        t_id = t_db.create_transaction(tr_1)
+        tr_1 = t_db.get_transaction(t_id)
+        # by default TransactionsDB doesn't set this field
+        self.assertEqual(None, tr_1.report_qa_score)
+
+        # execute migrate python script
+        model = get_transaction_model(engine)
+        migrations.migrate_report_qa_scores(t_db.session, model)
+        t_db.session.commit()
+
+        tr_2 = t_db.get_transaction(t_id)
+        self.assertEqual('good', tr_2.report_qa_score)
+        t_db.close()
+
+    def test_migrate_report_qa_2(self):
+        engine = self._get_temp_db(5)
+        t_db = TransactionDB(engine)
+        last_message = {
+            'data': {
+                'report_qa_score_outcomes': {
+                    'mdbrain_nd': 'good', 'mdbrain_ms': 'acceptable'}}}
+        tr_1 = Transaction()
+        tr_1.last_message = json.dumps(last_message)
+        t_id = t_db.create_transaction(tr_1)
+        tr_1 = t_db.get_transaction(t_id)
+        # by default TransactionsDB doesn't set this field
+        self.assertEqual(None, tr_1.report_qa_score)
+
+        # execute migrate python script
+        model = get_transaction_model(engine)
+        migrations.migrate_report_qa_scores(t_db.session, model)
+        t_db.session.commit()
+
+        tr_2 = t_db.get_transaction(t_id)
+        self.assertEqual(
+            'mdbrain_ms:acceptable;mdbrain_nd:good', tr_2.report_qa_score)
         t_db.close()

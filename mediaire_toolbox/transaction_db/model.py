@@ -107,7 +107,7 @@ class Transaction(Base):
             'last_message': self.last_message,
 
             'data_uploaded': self._datetime_to_str(self.data_uploaded),
-            'billable': self.billable
+            'billable': self.billable,
         }
 
     def read_dict(self, d: dict):
@@ -128,7 +128,7 @@ class Transaction(Base):
         self.end_date = self._str_to_datetime(d.get('end_date'))
         self.creation_date = self._str_to_datetime(d.get('creation_date'))
 
-        self.version = d.get("version"),
+        self.version = d.get("version")
         self.report_type = d.get("report_type")
         self.report_qa_score = d.get("report_qa_score")
         self.product_id = d.get('product_id')
