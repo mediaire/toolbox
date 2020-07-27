@@ -43,6 +43,7 @@ def migrate_scripts(session, engine, current_version, target_version):
         except Exception as e:
             session.rollback()
             session.close()
+            logger.exception(e)
             raise e
     session.close()
 

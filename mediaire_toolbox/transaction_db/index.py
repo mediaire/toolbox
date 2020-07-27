@@ -61,13 +61,12 @@ def index_report_qa(transaction):
         report_qa_score_outcomes = (
             json.loads(transaction.last_message)['data']
             ['report_qa_score_outcomes'])
-        default_logger.info(json.loads(transaction.last_message)['data'])
     except Exception:
         report_qa_score_outcomes = {}
-    default_logger.info(report_qa_score_outcomes)
+
     qa_string = None
     if len(report_qa_score_outcomes.keys()) == 1:
-        qa_string = report_qa_score_outcomes.values()[0]
+        qa_string = list(report_qa_score_outcomes.values())[0]
     else:
         conc_strings = [
             "{}:{}".format(k, v) for k, v in report_qa_score_outcomes.items()]
