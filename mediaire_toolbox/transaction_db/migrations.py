@@ -28,7 +28,7 @@ MIGRATIONS = {
         "ALTER TABLE transactions ADD COLUMN archived INT DEFAULT 0",
     ],
     7: [
-        "ALTER TABLE transactions ADD COLUMN study_date TEXT",    
+        "ALTER TABLE transactions ADD COLUMN study_date TEXT",
     ],
     8: [
         "ALTER TABLE transactions ADD COLUMN patient_consent INT DEFAULT 0",
@@ -38,13 +38,18 @@ MIGRATIONS = {
         "ALTER TABLE transactions ADD COLUMN product_id INT DEFAULT 1"
     ],
     11: [
-        "ALTER TABLE transactions ADD COLUMN data_uploaded DATETIME"        
+        "ALTER TABLE transactions ADD COLUMN data_uploaded DATETIME"
     ],
     12: [
         "ALTER TABLE transactions ADD COLUMN creation_date DATETIME"
     ],
     13: [
         "ALTER TABLE transactions ADD COLUMN billable TEXT"
+    ],
+    14: [
+        "ALTER TABLE transactions ADD COLUMN version VARCHAR(31)",
+        "ALTER TABLE transactions ADD COLUMN report_type VARCHAR(31)",
+        "ALTER TABLE transactions ADD COLUMN report_qa_score VARCHAR(31)",
     ]
 }
 
@@ -64,6 +69,27 @@ def migrate_study_date(session, model):
         index.index_study_date(transaction)
 
 
+def migrate_version(session, model):
+    for transaction in session.query(model).all():
+        index.index_version(transaction)
+        session.add(transaction)
+        session.commit()
+
+
+def migrate_report_types(session, model):
+    for transaction in session.query(model).all():
+        index.index_report_type(transaction)
+        session.add(transaction)
+        session.commit()
+
+
+def migrate_report_qa_scores(session, model):
+    for transaction in session.query(model).all():
+        index.index_report_qa(transaction)
+        session.add(transaction)
+        session.commit()
+
+
 MIGRATIONS_SCRIPTS = {
     5: [
         migrate_institution,
@@ -71,5 +97,10 @@ MIGRATIONS_SCRIPTS = {
     ],
     7: [
         migrate_study_date
+    ],
+    14: [
+        migrate_version,
+        migrate_report_types,
+        migrate_report_qa_scores
     ]
 }
