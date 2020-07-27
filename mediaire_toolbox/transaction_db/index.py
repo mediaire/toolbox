@@ -34,7 +34,7 @@ def index_study_date(transaction):
 
 def index_version(transaction):
     try:
-        version = (json.loads(transaction.last_message)['data']['vesion'])
+        version = (json.loads(transaction.last_message)['data']['version'])
     except Exception:
         version = None
     if version:
@@ -61,7 +61,7 @@ def index_report_qa(transaction):
     except Exception:
         report_qa_score_outcomes = {}
     qa_string = None
-    if len(report_qa_score_outcomes.keys()) > 1:
+    if len(report_qa_score_outcomes.keys()) == 1:
         qa_string = report_qa_score_outcomes.values()[0]
     else:
         conc_strings = [
