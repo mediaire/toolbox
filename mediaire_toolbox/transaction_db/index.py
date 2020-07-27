@@ -1,4 +1,7 @@
 import json
+import logging
+
+default_logger = logging.getLogger(__name__)
 
 
 def index_institution(transaction):
@@ -48,7 +51,7 @@ def index_report_type(transaction):
             ['report_pdf_paths'])
     except Exception:
         report_pdf_paths = {}
-    type_string = '|'.join(report_pdf_paths.keys())
+    type_string = ';'.join(report_pdf_paths.keys())
     if type_string:
         transaction.report_type = type_string
 
@@ -58,14 +61,16 @@ def index_report_qa(transaction):
         report_qa_score_outcomes = (
             json.loads(transaction.last_message)['data']
             ['report_qa_score_outcomes'])
+        default_logger.info(json.loads(transaction.last_message)['data'])
     except Exception:
         report_qa_score_outcomes = {}
+    default_logger.info(report_qa_score_outcomes)
     qa_string = None
     if len(report_qa_score_outcomes.keys()) == 1:
         qa_string = report_qa_score_outcomes.values()[0]
     else:
         conc_strings = [
             "{}:{}".format(k, v) for k, v in report_qa_score_outcomes.items()]
-        qa_string = "|".join(conc_strings)
+        qa_string = ";".join(conc_strings)
     if qa_string:
         transaction.report_qa_score = qa_string
