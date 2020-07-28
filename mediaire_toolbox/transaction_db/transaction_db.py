@@ -128,7 +128,8 @@ class TransactionDB:
     @lock
     def create_transaction(
             self, t: Transaction,
-            user_id=None, product_id=None,
+            user_id=None, product_id=None, analysis_type=None,
+            qa_score=None,
             processing_state='waiting') -> int:
         """will set the provided transaction object as queued,
         add it to the DB and return the transaction id.
@@ -148,6 +149,10 @@ class TransactionDB:
                 t.creation_date = datetime.datetime.utcnow()
             if product_id:
                 t.product_id = product_id
+            if analysis_type:
+                t.analysis_type = analysis_type
+            if qa_score:
+                t.qa_score = qa_score
             self.session.add(t)
             # when we commit, we get the transaction ID
             self.session.commit()
