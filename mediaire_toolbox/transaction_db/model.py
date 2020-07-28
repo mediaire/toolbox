@@ -39,8 +39,8 @@ class Transaction(Base):
 
     # transaction types
     version = Column(String(31))
-    report_type = Column(String(31))
-    report_qa_score = Column(String(31))
+    analysis_type = Column(String(31))
+    qa_score = Column(String(31))
     product_id = Column(Integer, default=1)
 
     # transaction states
@@ -91,8 +91,8 @@ class Transaction(Base):
             'creation_date': self._datetime_to_str(self.creation_date),
 
             'version': self.version,
-            'report_type': self.report_type,
-            'report_qa_score': self.report_qa_score,
+            'analysis_type': self.analysis_type,
+            'qa_score': self.qa_score,
             'product_id': self.product_id,
 
             'task_state': self.task_state.name if self.task_state else None,
@@ -129,8 +129,8 @@ class Transaction(Base):
         self.creation_date = self._str_to_datetime(d.get('creation_date'))
 
         self.version = d.get("version")
-        self.report_type = d.get("report_type")
-        self.report_qa_score = d.get("report_qa_score")
+        self.analysis_type = d.get("analysis_type")
+        self.qa_score = d.get("qa_score")
         self.product_id = d.get('product_id')
 
         self.task_state = TaskState[

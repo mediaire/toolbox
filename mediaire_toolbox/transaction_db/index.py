@@ -44,7 +44,7 @@ def index_version(transaction):
         transaction.version = version
 
 
-def index_report_type(transaction):
+def index_analysis_type(transaction):
     try:
         report_pdf_paths = (
             json.loads(transaction.last_message)['data']
@@ -53,23 +53,23 @@ def index_report_type(transaction):
         report_pdf_paths = {}
     type_string = ';'.join(report_pdf_paths.keys())
     if type_string:
-        transaction.report_type = type_string
+        transaction.analysis_type = type_string
 
 
 def index_report_qa(transaction):
     try:
-        report_qa_score_outcomes = (
+        qa_score_outcomes = (
             json.loads(transaction.last_message)['data']
-            ['report_qa_score_outcomes'])
+            ['qa_score_outcomes'])
     except Exception:
-        report_qa_score_outcomes = {}
+        qa_score_outcomes = {}
 
     qa_string = None
-    if len(report_qa_score_outcomes.keys()) == 1:
-        qa_string = list(report_qa_score_outcomes.values())[0]
+    if len(qa_score_outcomes.keys()) == 1:
+        qa_string = list(qa_score_outcomes.values())[0]
     else:
         conc_strings = [
-            "{}:{}".format(k, v) for k, v in report_qa_score_outcomes.items()]
+            "{}:{}".format(k, v) for k, v in qa_score_outcomes.items()]
         qa_string = ";".join(conc_strings)
     if qa_string:
-        transaction.report_qa_score = qa_string
+        transaction.qa_score = qa_string

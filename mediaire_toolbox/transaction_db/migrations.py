@@ -48,8 +48,8 @@ MIGRATIONS = {
     ],
     14: [
         "ALTER TABLE transactions ADD COLUMN version VARCHAR(31)",
-        "ALTER TABLE transactions ADD COLUMN report_type VARCHAR(31)",
-        "ALTER TABLE transactions ADD COLUMN report_qa_score VARCHAR(31)",
+        "ALTER TABLE transactions ADD COLUMN analysis_type VARCHAR(31)",
+        "ALTER TABLE transactions ADD COLUMN qa_score VARCHAR(31)",
     ]
 }
 
@@ -76,14 +76,14 @@ def migrate_version(session, model):
         session.commit()
 
 
-def migrate_report_types(session, model):
+def migrate_analysis_types(session, model):
     for transaction in session.query(model).all():
-        index.index_report_type(transaction)
+        index.index_analysis_type(transaction)
         session.add(transaction)
         session.commit()
 
 
-def migrate_report_qa_scores(session, model):
+def migrate_qa_scores(session, model):
     for transaction in session.query(model).all():
         index.index_report_qa(transaction)
         session.add(transaction)
@@ -100,7 +100,7 @@ MIGRATIONS_SCRIPTS = {
     ],
     14: [
         migrate_version,
-        migrate_report_types,
-        migrate_report_qa_scores
+        migrate_analysis_types,
+        migrate_qa_scores
     ]
 }

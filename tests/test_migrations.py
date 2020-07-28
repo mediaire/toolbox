@@ -141,7 +141,7 @@ class TestMigration(unittest.TestCase):
         self.assertEqual('2.2.1', tr_2.version)
         t_db.close()
 
-    def test_migrate_report_type(self):
+    def test_migrate_analysis_type(self):
         engine = self._get_temp_db(5)
         t_db = TransactionDB(engine)
         last_message = {'data': {'report_pdf_paths': {'mdbrain_nd': 'path1'}}}
@@ -150,18 +150,18 @@ class TestMigration(unittest.TestCase):
         t_id = t_db.create_transaction(tr_1)
         tr_1 = t_db.get_transaction(t_id)
         # by default TransactionsDB doesn't set this field
-        self.assertEqual(None, tr_1.report_type)
+        self.assertEqual(None, tr_1.analysis_type)
 
         # execute migrate python script
         model = get_transaction_model(engine)
-        migrations.migrate_report_types(t_db.session, model)
+        migrations.migrate_analysis_types(t_db.session, model)
         t_db.session.commit()
 
         tr_2 = t_db.get_transaction(t_id)
-        self.assertEqual('mdbrain_nd', tr_2.report_type)
+        self.assertEqual('mdbrain_nd', tr_2.analysis_type)
         t_db.close()
 
-    def test_migrate_report_type_2(self):
+    def test_migrate_analysis_type_2(self):
         engine = self._get_temp_db(5)
         t_db = TransactionDB(engine)
         last_message = {
@@ -172,36 +172,36 @@ class TestMigration(unittest.TestCase):
         t_id = t_db.create_transaction(tr_1)
         tr_1 = t_db.get_transaction(t_id)
         # by default TransactionsDB doesn't set this field
-        self.assertEqual(None, tr_1.report_type)
+        self.assertEqual(None, tr_1.analysis_type)
 
         # execute migrate python script
         model = get_transaction_model(engine)
-        migrations.migrate_report_types(t_db.session, model)
+        migrations.migrate_analysis_types(t_db.session, model)
         t_db.session.commit()
 
         tr_2 = t_db.get_transaction(t_id)
-        self.assertEqual('mdbrain_ms;mdbrain_nd', tr_2.report_type)
+        self.assertEqual('mdbrain_ms;mdbrain_nd', tr_2.analysis_type)
         t_db.close()
 
     def test_migrate_report_qa(self):
         engine = self._get_temp_db(5)
         t_db = TransactionDB(engine)
         last_message = {
-            'data': {'report_qa_score_outcomes': {'mdbrain_nd': 'good'}}}
+            'data': {'qa_score_outcomes': {'mdbrain_nd': 'good'}}}
         tr_1 = Transaction()
         tr_1.last_message = json.dumps(last_message)
         t_id = t_db.create_transaction(tr_1)
         tr_1 = t_db.get_transaction(t_id)
         # by default TransactionsDB doesn't set this field
-        self.assertEqual(None, tr_1.report_qa_score)
+        self.assertEqual(None, tr_1.qa_score)
 
         # execute migrate python script
         model = get_transaction_model(engine)
-        migrations.migrate_report_qa_scores(t_db.session, model)
+        migrations.migrate_qa_scores(t_db.session, model)
         t_db.session.commit()
 
         tr_2 = t_db.get_transaction(t_id)
-        self.assertEqual('good', tr_2.report_qa_score)
+        self.assertEqual('good', tr_2.qa_score)
         t_db.close()
 
     def test_migrate_report_qa_2(self):
@@ -209,21 +209,21 @@ class TestMigration(unittest.TestCase):
         t_db = TransactionDB(engine)
         last_message = {
             'data': {
-                'report_qa_score_outcomes': {
+                'qa_score_outcomes': {
                     'mdbrain_nd': 'good', 'mdbrain_ms': 'acceptable'}}}
         tr_1 = Transaction()
         tr_1.last_message = json.dumps(last_message)
         t_id = t_db.create_transaction(tr_1)
         tr_1 = t_db.get_transaction(t_id)
         # by default TransactionsDB doesn't set this field
-        self.assertEqual(None, tr_1.report_qa_score)
+        self.assertEqual(None, tr_1.qa_score)
 
         # execute migrate python script
         model = get_transaction_model(engine)
-        migrations.migrate_report_qa_scores(t_db.session, model)
+        migrations.migrate_qa_scores(t_db.session, model)
         t_db.session.commit()
 
         tr_2 = t_db.get_transaction(t_id)
         self.assertEqual(
-            'mdbrain_ms:acceptable;mdbrain_nd:good', tr_2.report_qa_score)
+            'mdbrain_ms:acceptable;mdbrain_nd:good', tr_2.qa_score)
         t_db.close()
