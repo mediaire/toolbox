@@ -439,6 +439,17 @@ class TransactionDB:
 
     @t_db_retry
     @lock
+    def set_qa_score(self, id_: int, qa_score):
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.qa_score = qa_score
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+    @t_db_retry
+    @lock
     def set_billable(self, id_: int, billable):
         try:
             t = self._get_transaction_or_raise_exception(id_)
