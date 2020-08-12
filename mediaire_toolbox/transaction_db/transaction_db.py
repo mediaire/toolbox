@@ -76,10 +76,16 @@ def migrate(session, engine, db_version):
             session.rollback()
             session.close()
             raise e
-    for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
+    for version in range(
+            from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
+        logger.warn(
+            "Started Database migration script to version {}....."
+            "DO NOT STOP PIPELINE".format(version))
         migrate_scripts(
             session, engine,
             from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
+        logger.warn(
+            "Finished migration script")
 
 
 def lock(func):

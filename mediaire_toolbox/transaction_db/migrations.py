@@ -1,4 +1,7 @@
 from mediaire_toolbox.transaction_db import index
+import logging
+
+default_logger = logging.getLogger(__name__)
 
 """SQL Commands that need to be issued in order to migrate the TransactionsDB
 from one version to another. Keyed by target version ID."""
@@ -70,24 +73,42 @@ def migrate_study_date(session, model):
 
 
 def migrate_version(session, model):
+    default_logger.warn("Indexing version")
     for transaction in session.query(model).all():
-        index.index_version(transaction)
-        session.add(transaction)
-        session.commit()
+        try:
+            index.index_version(transaction)
+            session.add(transaction)
+            session.commit()
+        except Exception:
+            default_logger.warn(
+                "Failed to index version for transaction id: {}"
+                .format(transaction.transaction_id))
 
 
 def migrate_analysis_types(session, model):
+    default_logger.warn("Indexing analysis_types")
     for transaction in session.query(model).all():
-        index.index_analysis_type(transaction)
-        session.add(transaction)
-        session.commit()
+        try:
+            index.index_analysis_type(transaction)
+            session.add(transaction)
+            session.commit()
+        except Exception:
+            default_logger.warn(
+                "Failed to index analysis_type for transaction id: {}"
+                .format(transaction.transaction_id))
 
 
 def migrate_qa_scores(session, model):
+    default_logger.warn("Indexing qa_scores")
     for transaction in session.query(model).all():
-        index.index_report_qa(transaction)
-        session.add(transaction)
-        session.commit()
+        try:
+            index.index_report_qa(transaction)
+            session.add(transaction)
+            session.commit()
+        except Exception:
+            default_logger.warn(
+                "Failed to index qa_score for transaction id: {}"
+                .format(transaction.transaction_id))
 
 
 MIGRATIONS_SCRIPTS = {
