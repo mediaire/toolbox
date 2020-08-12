@@ -64,7 +64,7 @@ def index_report_qa(transaction):
     try:
         qa_score_outcomes = (
             json.loads(transaction.last_message)['data']
-            ['qa_score_outcomes'])
+            ['report_qa_score_outcomes'])
     except Exception:
         qa_score_outcomes = {}
 
