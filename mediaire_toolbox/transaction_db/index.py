@@ -49,9 +49,13 @@ def index_analysis_type(transaction):
         report_pdf_paths = (
             json.loads(transaction.last_message)['data']
             ['report_pdf_paths'])
+        type_string = ';'.join(report_pdf_paths.keys())
     except Exception:
-        report_pdf_paths = {}
-    type_string = ';'.join(report_pdf_paths.keys())
+        if transaction.product_id == 2:
+            type_string = 'mdspine_ms'
+        else:
+            type_string = 'mdbrain_nd'
+
     if type_string:
         transaction.analysis_type = type_string
 
