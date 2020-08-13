@@ -136,7 +136,8 @@ class TransactionDB:
             self, t: Transaction,
             user_id=None, product_id=None, analysis_type=None,
             qa_score=None,
-            processing_state='waiting') -> int:
+            processing_state='waiting',
+            task_state='queued') -> int:
         """will set the provided transaction object as queued,
         add it to the DB and return the transaction id.
 
@@ -149,7 +150,11 @@ class TransactionDB:
         product_id: int
         """
         try:
-            t.task_state = TaskState.queued
+            if task_state == 'failed':
+                t.task_state = TaskState.failed
+            else:
+                t.task_state = TaskState.queued
+
             t.processing_state = processing_state
             if not t.creation_date:
                 t.creation_date = datetime.datetime.utcnow()
