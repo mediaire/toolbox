@@ -166,7 +166,8 @@ class TestMigration(unittest.TestCase):
         t_db = TransactionDB(engine)
         last_message = {
             'data': {
-                'report_pdf_paths': {'mdbrain_nd': 'path1', 'mdbrain_ms': 'path2'}}}
+                'report_pdf_paths':
+                    {'mdbrain_nd': 'path1', 'mdbrain_ms': 'path2'}}}
         tr_1 = Transaction()
         tr_1.last_message = json.dumps(last_message)
         t_id = t_db.create_transaction(tr_1)
@@ -180,14 +181,15 @@ class TestMigration(unittest.TestCase):
         t_db.session.commit()
 
         tr_2 = t_db.get_transaction(t_id)
-        self.assertEqual('mdbrain_ms;mdbrain_nd', tr_2.analysis_type)
+        self.assertTrue('mdbrain_ms' in tr_2.analysis_type)
+        self.assertTrue('mdbrain_nd' in tr_2.analysis_type)
         t_db.close()
 
     def test_migrate_report_qa(self):
         engine = self._get_temp_db(5)
         t_db = TransactionDB(engine)
         last_message = {
-            'data': {'qa_score_outcomes': {'mdbrain_nd': 'good'}}}
+            'data': {'report_qa_score_outcomes': {'mdbrain_nd': 'good'}}}
         tr_1 = Transaction()
         tr_1.last_message = json.dumps(last_message)
         t_id = t_db.create_transaction(tr_1)
@@ -209,7 +211,7 @@ class TestMigration(unittest.TestCase):
         t_db = TransactionDB(engine)
         last_message = {
             'data': {
-                'qa_score_outcomes': {
+                'report_qa_score_outcomes': {
                     'mdbrain_nd': 'good', 'mdbrain_ms': 'acceptable'}}}
         tr_1 = Transaction()
         tr_1.last_message = json.dumps(last_message)
@@ -224,6 +226,6 @@ class TestMigration(unittest.TestCase):
         t_db.session.commit()
 
         tr_2 = t_db.get_transaction(t_id)
-        self.assertEqual(
-            'mdbrain_ms:acceptable;mdbrain_nd:good', tr_2.qa_score)
+        self.assertTrue('mdbrain_ms:acceptable' in tr_2.qa_score)
+        self.assertTrue('mdbrain_nd:good' in tr_2.qa_score)
         t_db.close()
