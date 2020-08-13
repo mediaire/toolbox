@@ -19,32 +19,47 @@ class Transaction(Base):
     """A general transaction, this could be used by any pipeline"""
     transaction_id = Column(Integer, Sequence(
         'transaction_id'), primary_key=True)
+
+    # study info
     study_id = Column(String(255))
     patient_id = Column(String(255))
     name = Column(String(255))
     birth_date = Column(Date())
+    # TODO convert this to date
+    study_date = Column(String())
+    patient_consent = Column(Integer, default=0)
+    # indexed from DICOM header, for free text search
+    institution = Column(String())
+
+    # transaction dates
     start_date = Column(DateTime())
     end_date = Column(DateTime())
     # time when the transaction was created
     creation_date = Column(DateTime())
+
+    # transaction types
+    version = Column(String(31))
+    analysis_type = Column(String(31))
+    qa_score = Column(String(31))
+    product_id = Column(Integer, default=1)
+
+    # transaction states
     task_state = Column(Enum(TaskState))
     processing_state = Column(String(255))
-    last_message = Column(String)
-    error = Column(String())
-    # new platform status: unseen / reviewed / sent_to_pacs
-    status = Column(String())
-    # indexed from DICOM header, for free text search
-    institution = Column(String())
-    # indexed from Task object, for free text search
-    sequences = Column(String())
-    # indexed from DICOM header, for sorting
-    study_date = Column(String())
     task_progress = Column(Integer, default=0)
     task_skipped = Column(Integer, default=0)
     task_cancelled = Column(Integer, default=0)
     archived = Column(Integer, default=0)
-    patient_consent = Column(Integer, default=0)
-    product_id = Column(Integer, default=1)
+
+    error = Column(String())
+    # new platform status: unseen / reviewed / sent_to_pacs
+    status = Column(String())
+    # indexed from Task object, for free text search
+    sequences = Column(String())
+    # indexed from DICOM header, for sorting
+    last_message = Column(String)
+
+    # misc
     data_uploaded = Column(DateTime())
     billable = Column(String())
 
@@ -60,60 +75,76 @@ class Transaction(Base):
         )
 
     def to_dict(self):
-        return { 'transaction_id': self.transaction_id,
-                 'study_id': self.study_id,
-                 'patient_id': self.patient_id,
-                 'name': self.name,
-                 'birth_date': self.birth_date.strftime("%d/%m/%Y")
-                    if self.birth_date else None,
-                 'start_date': self._datetime_to_str(self.start_date),
-                 'end_date': self._datetime_to_str(self.end_date),
-                 'creation_date': self._datetime_to_str(self.creation_date),
-                 'task_state': self.task_state.name if self.task_state else None,
-                 'processing_state': self.processing_state,
-                 'study_date': self.study_date,
-                 'last_message': self.last_message,
-                 'task_progress': self.task_progress,
-                 'error': self.error,
-                 'task_skipped': self.task_skipped,
-                 'task_cancelled': self.task_cancelled,
-                 'status': self.status,
-                 'institution': self.institution,
-                 'sequences': self.sequences,
-                 'archived': self.archived,
-                 'patient_consent': self.patient_consent,
-                 'product_id': self.product_id,
-                 'data_uploaded': self._datetime_to_str(self.data_uploaded),
-                 'billable': self.billable
-                }
+        return {
+            'transaction_id': self.transaction_id,
+            'study_id': self.study_id,
+            'patient_id': self.patient_id,
+            'name': self.name,
+            'birth_date': self.birth_date.strftime("%d/%m/%Y")
+            if self.birth_date else None,
+            'study_date': self.study_date,
+            'patient_consent': self.patient_consent,
+            'institution': self.institution,
+
+            'start_date': self._datetime_to_str(self.start_date),
+            'end_date': self._datetime_to_str(self.end_date),
+            'creation_date': self._datetime_to_str(self.creation_date),
+
+            'version': self.version,
+            'analysis_type': self.analysis_type,
+            'qa_score': self.qa_score,
+            'product_id': self.product_id,
+
+            'task_state': self.task_state.name if self.task_state else None,
+            'processing_state': self.processing_state,
+            'task_progress': self.task_progress,
+            'task_skipped': self.task_skipped,
+            'task_cancelled': self.task_cancelled,
+            'archived': self.archived,
+            'error': self.error,
+            'status': self.status,
+            'sequences': self.sequences,
+            'last_message': self.last_message,
+
+            'data_uploaded': self._datetime_to_str(self.data_uploaded),
+            'billable': self.billable,
+        }
 
     def read_dict(self, d: dict):
         """Read transaction from dictionary"""
         self.transaction_id = d.get('transaction_id')
+
         self.study_id = d.get('study_id')
         self.patient_id = d.get('patient_id')
         self.name = d.get('name')
         birth_date = d.get('birth_date')
         self.birth_date = datetime.datetime.strptime(
             birth_date, "%d/%m/%Y") if birth_date else None
+        self.study_date = d.get('study_date')
+        self.patient_consent = d.get('patient_consent')
+        self.institution = d.get('institution')
+
         self.start_date = self._str_to_datetime(d.get('start_date'))
         self.end_date = self._str_to_datetime(d.get('end_date'))
         self.creation_date = self._str_to_datetime(d.get('creation_date'))
+
+        self.version = d.get("version")
+        self.analysis_type = d.get("analysis_type")
+        self.qa_score = d.get("qa_score")
+        self.product_id = d.get('product_id')
+
         self.task_state = TaskState[
             d.get('task_state')] if d.get('task_state') else None
         self.processing_state = d.get('processing_state')
-        self.study_date = d.get('study_date')
-        self.last_message = d.get('last_message')
         self.task_progress = d.get('task_progress')
-        self.error = d.get('error')
         self.task_skipped = d.get('task_skipped')
         self.task_cancelled = d.get('task_cancelled')
-        self.status = d.get('status')
-        self.institution = d.get('institution')
-        self.sequences = d.get('sequences')
         self.archived = d.get('archived')
-        self.patient_consent = d.get('patient_consent')
-        self.product_id = d.get('product_id')
+        self.error = d.get('error')
+        self.status = d.get('status')
+        self.sequences = d.get('sequences')
+        self.last_message = d.get('last_message')
+
         self.data_uploaded = self._str_to_datetime(d.get('data_uploaded'))
         self.billable = d.get('billable')
         return self

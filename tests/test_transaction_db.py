@@ -492,6 +492,20 @@ class TestTransactionDB(unittest.TestCase):
         self.assertEqual(0, t.patient_consent)
         t_db.close()
 
+    def test_set_qa_score(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1, qa_score='good')
+        t = t_db.get_transaction(t_id)
+        self.assertEqual('good', t.qa_score)
+
+        t_db.set_qa_score(t_id, 'rejected')
+        t = t_db.get_transaction(t_id)
+        self.assertEqual('rejected', t.qa_score)
+        t_db.close()
+
     def test_set_billable(self):
         engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()

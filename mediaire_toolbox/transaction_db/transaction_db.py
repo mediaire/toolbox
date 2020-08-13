@@ -43,6 +43,7 @@ def migrate_scripts(session, engine, current_version, target_version):
         except Exception as e:
             session.rollback()
             session.close()
+            logger.exception(e)
             raise e
     session.close()
 
@@ -75,10 +76,16 @@ def migrate(session, engine, db_version):
             session.rollback()
             session.close()
             raise e
-    for version in range(from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
+    for version in range(
+            from_schema_version + 1, TRANSACTIONS_DB_SCHEMA_VERSION + 1):
+        logger.warn(
+            "Started Database migration script to version {}....."
+            "DO NOT STOP PIPELINE".format(version))
         migrate_scripts(
             session, engine,
             from_schema_version, TRANSACTIONS_DB_SCHEMA_VERSION)
+        logger.warn(
+            "Finished migration script")
 
 
 def lock(func):
@@ -127,8 +134,10 @@ class TransactionDB:
     @lock
     def create_transaction(
             self, t: Transaction,
-            user_id=None, product_id=None,
-            processing_state='waiting') -> int:
+            user_id=None, product_id=None, analysis_type=None,
+            qa_score=None,
+            processing_state='waiting',
+            task_state='queued') -> int:
         """will set the provided transaction object as queued,
         add it to the DB and return the transaction id.
 
@@ -141,12 +150,20 @@ class TransactionDB:
         product_id: int
         """
         try:
-            t.task_state = TaskState.queued
+            if task_state == 'failed':
+                t.task_state = TaskState.failed
+            else:
+                t.task_state = TaskState.queued
+
             t.processing_state = processing_state
             if not t.creation_date:
                 t.creation_date = datetime.datetime.utcnow()
             if product_id:
                 t.product_id = product_id
+            if analysis_type:
+                t.analysis_type = analysis_type
+            if qa_score:
+                t.qa_score = qa_score
             self.session.add(t)
             # when we commit, we get the transaction ID
             self.session.commit()
@@ -169,8 +186,8 @@ class TransactionDB:
                     t.last_message = json.dumps(lm)
                 except Exception:
                     pass
-            # index.index_institution(t)
-            index.index_sequences(t)
+            # index.set_index_institution(t)
+            index.set_index_sequences(t)
             self.session.commit()
             return t.transaction_id
         except Exception:
@@ -426,6 +443,17 @@ class TransactionDB:
         try:
             t = self._get_transaction_or_raise_exception(id_)
             t.patient_consent = 0
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+    @t_db_retry
+    @lock
+    def set_qa_score(self, id_: int, qa_score):
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.qa_score = qa_score
             self.session.commit()
         except Exception:
             self.session.rollback()
