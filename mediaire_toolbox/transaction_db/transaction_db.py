@@ -186,8 +186,8 @@ class TransactionDB:
                     t.last_message = json.dumps(lm)
                 except Exception:
                     pass
-            # index.index_institution(t)
-            index.index_sequences(t)
+            # index.set_index_institution(t)
+            index.set_index_sequences(t)
             self.session.commit()
             return t.transaction_id
         except Exception:

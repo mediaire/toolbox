@@ -59,24 +59,24 @@ MIGRATIONS = {
 
 def migrate_institution(session, model):
     for transaction in session.query(model).all():
-        index.index_institution(transaction)
+        index.set_index_institution(transaction)
 
 
 def migrate_sequences(session, model):
     for transaction in session.query(model).all():
-        index.index_sequences(transaction)
+        index.set_index_sequences(transaction)
 
 
 def migrate_study_date(session, model):
     for transaction in session.query(model).all():
-        index.index_study_date(transaction)
+        index.set_index_study_date(transaction)
 
 
 def migrate_version(session, model):
     default_logger.warn("Indexing version")
     for transaction in session.query(model).all():
         try:
-            index.index_version(transaction)
+            index.set_index_version(transaction)
             session.add(transaction)
             session.commit()
         except Exception:
@@ -89,7 +89,7 @@ def migrate_analysis_types(session, model):
     default_logger.warn("Indexing analysis_types")
     for transaction in session.query(model).all():
         try:
-            index.index_analysis_type(transaction)
+            index.set_index_analysis_type(transaction)
             session.add(transaction)
             session.commit()
         except Exception:
@@ -102,7 +102,7 @@ def migrate_qa_scores(session, model):
     default_logger.warn("Indexing qa_scores")
     for transaction in session.query(model).all():
         try:
-            index.index_report_qa(transaction)
+            index.set_index_report_qa(transaction)
             session.add(transaction)
             session.commit()
         except Exception:

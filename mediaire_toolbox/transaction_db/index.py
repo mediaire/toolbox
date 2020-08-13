@@ -4,7 +4,7 @@ import logging
 default_logger = logging.getLogger(__name__)
 
 
-def index_institution(transaction):
+def set_index_institution(transaction):
     try:
         institution = (json.loads(transaction.last_message)['data']
                        ['dicom_info']['t1']['header']['InstitutionName'])
@@ -13,7 +13,7 @@ def index_institution(transaction):
     transaction.institution = institution
 
 
-def index_sequences(transaction):
+def set_index_sequences(transaction):
     sequence_list = []
     for series_type in ['t1', 't2']:
         try:
@@ -26,7 +26,7 @@ def index_sequences(transaction):
     transaction.sequences = ';'.join(sequence_list)
 
 
-def index_study_date(transaction):
+def set_index_study_date(transaction):
     try:
         study_date = (json.loads(transaction.last_message)['data']
                       ['dicom_info']['t1']['header']['StudyDate'])
@@ -35,7 +35,9 @@ def index_study_date(transaction):
     transaction.study_date = study_date
 
 
-def index_version(transaction):
+def set_index_version(transaction):
+    """Migration script. Index the version number in the last_message
+    field to the 'version' column"""
     try:
         version = (json.loads(transaction.last_message)['data']['version'])
     except Exception:
@@ -44,7 +46,9 @@ def index_version(transaction):
         transaction.version = version
 
 
-def index_analysis_type(transaction):
+def set_index_analysis_type(transaction):
+    """Migration script. Index the analysis type(s)
+    of the transaction to the 'analysis type' column"""
     try:
         report_pdf_paths = (
             json.loads(transaction.last_message)['data']
@@ -60,7 +64,9 @@ def index_analysis_type(transaction):
         transaction.analysis_type = type_string
 
 
-def index_report_qa(transaction):
+def set_index_report_qa(transaction):
+    """Migration script. Index the  qa score of the transaction
+    to the 'qa_score' column"""
     try:
         qa_score_outcomes = (
             json.loads(transaction.last_message)['data']
