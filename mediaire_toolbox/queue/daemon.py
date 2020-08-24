@@ -97,8 +97,10 @@ class QueueDaemon(ABC):
             self.process_task(task)
             self.input_queue.complete(item)
         except Exception as e:
+            t_id = task.t_id if task.t_id else -1
             logger.exception(
-                "Error processing task in %s" % self.daemon_name)
+                "transaction={} Error processing task in {}"
+                .format(t_id, self.daemon_name))
             tb = traceback.format_exc()
             msg = "{} --> in '{}': {}".format(e, __file__, tb)
             if task.t_id and self.result_queue:
