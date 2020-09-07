@@ -1,6 +1,7 @@
 import logging
 import json
 import threading
+import shutil
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -104,13 +105,16 @@ class TransactionDB:
     """Connection to a DB of transactions where we can track status, failures,
     elapsed time, etc."""
 
-    def __init__(self, engine, create_db=True):
+    def __init__(self, engine, create_db=True, db_file_path=None):
         """
         Parameters
         ----------
         engine: SQLAlchemy engine
         create_db: bool
             If true, database will be updated/created
+        db_file_path: path
+            If create_db, create an backup for
+            this file if migration is triggered
         """
         # lock for atomic operations
         self.lock = threading.RLock()
@@ -129,6 +133,14 @@ class TransactionDB:
             else:
                 # check if the existing database is old, and if so migrate
                 if db_version.schema_version < TRANSACTIONS_DB_SCHEMA_VERSION:
+                    if db_file_path:
+                        dest_path = db_file_path + '.v_{}.bkp'.format(
+                            db_version.schema_version)
+                        shutil.copy(db_file_path, dest_path)
+                        logger.info(
+                            "Created backup for file '{}'"
+                            .format(db_file_path))
+
                     migrate(self.session, engine, db_version)
 
     @lock

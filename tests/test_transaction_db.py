@@ -424,7 +424,9 @@ class TestTransactionDB(unittest.TestCase):
         shutil.copy('tests/fixtures/t_v1.db', temp_db_path)
         engine = create_engine('sqlite:///' + temp_db_path)
         # should execute all migrations code
-        t_db = TransactionDB(engine)
+        t_db = TransactionDB(engine, create_db=True, db_file_path=temp_db_path)
+
+        self.assertTrue(os.path.exists(temp_db_path + '.v_1.bkp'))
         # add a new transaction with the current model
         t = Transaction()
         t_db.create_transaction(t)
