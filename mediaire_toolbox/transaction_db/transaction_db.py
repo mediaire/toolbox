@@ -14,7 +14,7 @@ from mediaire_toolbox.transaction_db.model import Transaction, \
     UserTransaction, \
     User, \
     Role, \
-    UserRole
+    UserRole, UserPreferences
 
 from mediaire_toolbox.transaction_db.exceptions import TransactionDBException
 from mediaire_toolbox.transaction_db import migrations
@@ -609,6 +609,42 @@ class TransactionDB:
                 raise TransactionDBException("The user doesn't exist")
             self.session.delete(user)
             self.session.commit()
+        finally:
+            self.session.rollback()
+
+    @t_db_retry
+    def set_user_preferences(self, user_id: int, preferences: dict):
+        """Change or set for the first time the preferences of a user
+        in a multi-tenant environment"""
+        try:
+            user_prefs = self.session.query(UserPreferences).get(user_id)
+            if not user_prefs:
+                user_prefs = UserPreferences()
+                user_prefs.user_id = user_id
+                self.session.add(user_prefs)
+
+            try:
+                for key, value in preferences.items():
+                    if key == 'user_id':
+                        continue
+                    setattr(user_prefs, key, value)
+            except Exception:
+                raise TransactionDBException("Invalid user preference key {}"
+                                             .format(key))
+
+            self.session.commit()
+        finally:
+            self.session.rollback()
+
+    @t_db_retry
+    def get_user_preferences(self, user_id: int) -> dict:
+        """Return a dict with the user preferences,
+        or None if no special prefs. set for this user"""
+        try:
+            prefs = self.session.query(UserPreferences).get(user_id)
+            if prefs:
+                return prefs.to_dict()
+            return None
         finally:
             self.session.rollback()
 

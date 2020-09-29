@@ -633,3 +633,47 @@ class TestTransactionDB(unittest.TestCase):
         t_db.add_role('radiologist', 'whatever')
 
         t_db.revoke_user_role(user_id, 'radiologist')
+        
+    def test_user_preferences(self):
+        """test that the preferences saving and retrieving system works"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id_1 = t_db.add_user('Pere1', 'pwd')
+        user_id_2 = t_db.add_user('Pere2', 'pwd')
+
+        self.assertTrue(t_db.get_user_preferences(user_id_1) is None)
+        self.assertTrue(t_db.get_user_preferences(user_id_2) is None)
+        
+        preferences = { 'report_language': 'en' }
+        t_db.set_user_preferences(user_id_1, preferences)
+        preferences = { 'report_language': 'de' }
+        t_db.set_user_preferences(user_id_2, preferences)
+        
+        prefs = t_db.get_user_preferences(user_id_1)
+        self.assertEqual(user_id_1, prefs['user_id'])
+        self.assertEqual('en', prefs['report_language'])
+        
+        prefs = t_db.get_user_preferences(user_id_2)
+        self.assertEqual(user_id_2, prefs['user_id'])
+        self.assertEqual('de', prefs['report_language'])
+
+    @unittest.expectedFailure
+    def test_user_preferences_invalid_keys(self):
+        """test that upon providing an invalid preference key for the
+        preferences system, a TransactionDBException is thrown"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+        user_id_1 = t_db.add_user('Pere1', 'pwd')
+        
+        t_db.set_user_preferences(user_id_1, {'foo': 'bar'})
+        
+    @unittest.expectedFailure
+    def test_user_preferences_invalid_user(self):
+        """test that user_id is a foreign key in the relational model
+        of the user preferences, and as such will cause the db to fail
+        if we provide whatever as user_id"""
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+
+        t_db.set_user_preferences(100, { 'report_language': 'en' })
+        
