@@ -316,9 +316,8 @@ class DataCleaner:
         DataCleaner._remove_from_file_list(filelist, removed_index_list)
         return removed
 
-    @staticmethod
-    def remove_files(remove_list):
-        """Trie to remove the files from disk in the remove_list
+    def remove_files(self, remove_list):
+        """Tries to remove the files from disk in the remove_list
 
         Returns
         -------

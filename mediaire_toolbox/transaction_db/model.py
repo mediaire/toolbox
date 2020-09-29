@@ -228,6 +228,26 @@ class UserRole(Base):
         return self
 
 
+class UserPreferences(Base):
+    
+    """for multi-tenant pipelines, users might have different preferences
+    like the language they want their reports in"""
+    __tablename__ = 'users_preferences'
+
+    user_id = Column(Integer, ForeignKey('users.id'),
+                     primary_key=True)
+    report_language = Column(String(255))
+
+    def to_dict(self):
+        return { 'user_id': self.user_id,
+                 'report_language': self.report_language }
+
+    def read_dict(self, d: dict):
+        self.user_id = d.get('user_id')
+        self.report_language = d.get('report_language')
+        return self
+    
+
 class Role(Base):
 
     """for multi-tenant pipelines, users might have different roles in the
