@@ -625,6 +625,8 @@ class TransactionDB:
 
             try:
                 for key, value in preferences.items():
+                    if key == 'user_id':
+                        continue
                     setattr(user_prefs, key, value)
             except Exception:
                 raise TransactionDBException("Invalid user preference key {}"
