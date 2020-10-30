@@ -3,6 +3,7 @@ import json
 import threading
 import shutil
 
+from sqlite3 import OperationalError
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -311,6 +312,8 @@ class TransactionDB:
             Signals the relative progress to completion of the task
         """
         try:
+            logger.info("Trying to set to processing")
+            raise OperationalError
             t = self._get_transaction_or_raise_exception(id_)
             t.processing_state = new_processing_state
             t.task_state = TaskState.processing

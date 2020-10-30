@@ -102,7 +102,8 @@ class QueueDaemon(ABC):
                 "transaction={} Error processing task in {}"
                 .format(t_id, self.daemon_name))
             tb = traceback.format_exc()
-            msg = "{} --> in '{}': {}".format(e, __file__, tb)
+            msg = "{}:{} --> in '{}': {}".format(
+                type(e).__name__, e, __file__, tb)
             if task.t_id and self.result_queue:
                 # send the task back to the task manager with an error
                 # so the task manager can decide what to do with it
