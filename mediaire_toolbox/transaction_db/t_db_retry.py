@@ -21,8 +21,11 @@ Retry only for certain exceptions that we know are problematic.
 """
 
 
-def before_sleep_log(logger):
-    logger.warn("Database locked, retrying")
+def before_sleep_log(retry_state):
+    default_logger.warn(
+        'Retrying {}: attempt {} ended with: {}'
+        .format(retry_state.fn, retry_state.attempt_number,
+                retry_state.outcome))
 
 
 def t_db_retry(f):
@@ -32,4 +35,4 @@ def t_db_retry(f):
             | retry_if_exception_type(Sqlite3OperationalError)),
         stop=stop_after_attempt(RETRY_DATABASE_OP_TIMES),
         wait=wait_fixed(RETRY_DATABASE_OP_SECONDS),
-        before_sleep=before_sleep_log(default_logger))(f)
+        before_sleep=before_sleep_log)(f)
