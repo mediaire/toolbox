@@ -477,7 +477,7 @@ class TestTransactionDB(unittest.TestCase):
         t = t_db.get_transaction(t_id)
         self.assertEqual(1, t.patient_consent)
 
-    def test_retry_logic(self):
+    def test_retry_logic_2(self):
         """test that our database retry logic works.
         Raise exception randomly and perform the given task randomly,
         such that retrying should eventually work"""
