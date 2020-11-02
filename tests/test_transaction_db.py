@@ -15,7 +15,8 @@ from mediaire_toolbox.transaction_db.model import (
 )
 
 from temp_db_base import TempDBFactory
-from _sqlite3 import OperationalError
+from _sqlite3 import OperationalError as Sqlite3OperationalError
+from sqlalchemy.exc import OperationalError
 
 temp_db = TempDBFactory('test_transaction_db')
 
@@ -464,6 +465,40 @@ class TestTransactionDB(unittest.TestCase):
                 should_fail_once = False
                 # Raising this exception means it should be retried
                 raise OperationalError
+            return orig_f(t_id)
+
+        t_db._get_transaction_or_raise_exception = mocked_f
+
+        try:
+            t_db.set_patient_consent(t_id)
+        except Exception:
+            pass
+
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(1, t.patient_consent)
+
+    def test_retry_logic_2(self):
+        """test that our database retry logic works.
+        Raise exception randomly and perform the given task randomly,
+        such that retrying should eventually work"""
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(0, t.patient_consent)
+
+        orig_f = t_db._get_transaction_or_raise_exception
+
+        should_fail_once = True
+
+        def mocked_f(t_id):
+            nonlocal should_fail_once
+            if should_fail_once:
+                should_fail_once = False
+                # Raising this exception means it should be retried
+                raise Sqlite3OperationalError
             return orig_f(t_id)
 
         t_db._get_transaction_or_raise_exception = mocked_f
