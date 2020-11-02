@@ -1,3 +1,5 @@
+import logging
+
 from tenacity.retry import retry_if_exception_type
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -9,6 +11,8 @@ from mediaire_toolbox.constants import (
     RETRY_DATABASE_OP_TIMES
 )
 
+default_logger = logging.getLogger(__name__)
+
 
 """
 Database retry logic for the Transactions DB.
@@ -17,10 +21,15 @@ Retry only for certain exceptions that we know are problematic.
 """
 
 
+def before_sleep_log(logger):
+    logger.warn("Database locked, retrying")
+
+
 def t_db_retry(f):
     return retry(
         retry=(
             retry_if_exception_type(OperationalError)
             | retry_if_exception_type(Sqlite3OperationalError)),
         stop=stop_after_attempt(RETRY_DATABASE_OP_TIMES),
-        wait=wait_fixed(RETRY_DATABASE_OP_SECONDS))(f)
+        wait=wait_fixed(RETRY_DATABASE_OP_SECONDS),
+        before_sleep=before_sleep_log(default_logger))(f)
