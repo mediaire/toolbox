@@ -1,7 +1,8 @@
 from tenacity.retry import retry_if_exception_type
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from sqlite3 import OperationalError
+from sqlite3 import OperationalError as Sqlite3OperationalError
+from sqlalchemy.exc import OperationalError
 
 from mediaire_toolbox.constants import (
     RETRY_DATABASE_OP_SECONDS,
@@ -17,6 +18,9 @@ Retry only for certain exceptions that we know are problematic.
 
 
 def t_db_retry(f):
-    return retry(retry=retry_if_exception_type(OperationalError),
-                 stop=stop_after_attempt(RETRY_DATABASE_OP_TIMES),
-                 wait=wait_fixed(RETRY_DATABASE_OP_SECONDS))(f)
+    return retry(
+        retry=(
+            retry_if_exception_type(OperationalError)
+            | retry_if_exception_type(Sqlite3OperationalError)),
+        stop=stop_after_attempt(RETRY_DATABASE_OP_TIMES),
+        wait=wait_fixed(RETRY_DATABASE_OP_SECONDS))(f)
