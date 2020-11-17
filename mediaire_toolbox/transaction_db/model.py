@@ -3,6 +3,7 @@ import datetime
 from sqlalchemy import Column, Integer, String, Sequence, DateTime, Date, Enum, \
                         ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import deferred
 from passlib.apps import custom_app_context as pwd_context
 
 from mediaire_toolbox.task_state import TaskState
@@ -57,7 +58,7 @@ class Transaction(Base):
     # indexed from Task object, for free text search
     sequences = Column(String())
     # indexed from DICOM header, for sorting
-    last_message = Column(String)
+    last_message = deferred(Column(String))
 
     # misc
     data_uploaded = Column(DateTime())
