@@ -329,9 +329,12 @@ class DataCleaner:
         if reduce_size < 0:
             return []
 
-        remove_cands = [
-            file_obj for file_obj in filelist
-            if fnmatch.fnmatch(file_obj[0], pattern)]
+        if pattern:
+            remove_cands = [
+                file_obj for file_obj in filelist
+                if fnmatch.fnmatch(file_obj[0], pattern)]
+        else:
+            return []
 
         # group files by their dir name
         sorted_f = sorted(remove_cands, key=itemgetter(0))
@@ -364,7 +367,8 @@ class DataCleaner:
 
     @staticmethod
     def clean_files_by_size_optimized(
-            filelist, reduce_size, whitelist=None, pattern=None):
+            filelist, reduce_size, whitelist=None,
+            pattern: str = None):
         """Remove files, remove oldest files first"""
         if reduce_size < 0:
             return []
@@ -381,7 +385,7 @@ class DataCleaner:
                     file_obj for file_obj in filelist
                     if fnmatch.fnmatch(file_obj[0], pattern)]
         else:
-            raise ValueError("No pattern specified")
+            return []
 
         i = -1
         for i, file_obj in enumerate(remove_cands):

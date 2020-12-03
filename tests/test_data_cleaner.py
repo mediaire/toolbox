@@ -215,7 +215,8 @@ class TestDataCleaner(unittest.TestCase):
             )
 
     def test_clean_files_by_size_1(self):
-        self.assertEqual([], DataCleaner.clean_files_by_size([], 1, [], []))
+        self.assertEqual([], DataCleaner.clean_files_by_size_optimized(
+            [], 1, [], []))
 
     def test_clean_files_by_size_2(self):
         filelist = [
@@ -224,9 +225,9 @@ class TestDataCleaner(unittest.TestCase):
             ('file3', 0, 10),
             ('file4', 0, 10)
         ]
-        removed = DataCleaner.clean_files_by_size(filelist, 15, [], ['file*'])
+        removed = DataCleaner.clean_files_by_size_optimized(
+            filelist, 15, [], 'file*')
         self.assertEqual([('file1', 0, 10), ('file2', 0, 10)], removed)
-        self.assertEqual([('file3', 0, 10), ('file4', 0, 10)], filelist)
 
     def test_clean_files_by_size_blacklist(self):
         filelist = [
@@ -235,13 +236,9 @@ class TestDataCleaner(unittest.TestCase):
             ('file3', 0, 10),
             ('file4', 0, 10)
         ]
-        removed = DataCleaner.clean_files_by_size(filelist, 15, [], ['file3'])
+        removed = DataCleaner.clean_files_by_size_optimized(
+            filelist, 15, [], 'file3')
         self.assertEqual([('file3', 0, 10)], removed)
-        self.assertEqual(
-            [('file1', 0, 10),
-             ('file2', 0, 10),
-             ('file4', 0, 10)],
-            filelist)
 
     def test_clean_files_by_size_whitelist(self):
         filelist = [
@@ -250,10 +247,9 @@ class TestDataCleaner(unittest.TestCase):
             ('file3', 0, 10),
             ('file4', 0, 10)
         ]
-        removed = DataCleaner.clean_files_by_size(
-            filelist, 15, ['file1'], ['file*'])
+        removed = DataCleaner.clean_files_by_size_optimized(
+            filelist, 15, ['file1'], 'file*')
         self.assertEqual([('file2', 0, 10), ('file3', 0, 10)], removed)
-        self.assertEqual([('file1', 0, 10), ('file4', 0, 10)], filelist)
 
     def test_remove_files_file_nonexistent(self):
         fail_list = DataCleaner.remove_files(
@@ -263,7 +259,8 @@ class TestDataCleaner(unittest.TestCase):
     def test_remove_empty_folder_from_base_folder_1(self):
         try:
             base_folder = tempfile.mkdtemp()
-            removed = DataCleaner.remove_empty_folder_from_base_folder(base_folder)
+            removed = DataCleaner.remove_empty_folder_from_base_folder(
+                base_folder)
             self.assertEqual([], removed)
         finally:
             shutil.rmtree(base_folder)
@@ -492,4 +489,4 @@ class TestDataCleaner(unittest.TestCase):
         DataCleaner.clean_files_by_size_optimized(
             filelist, reduce_size=100000000, pattern='*dcm')
         e_time = time.time()
-        self.assertLess(e_time - s_time, 1)
+        self.assertLess(e_time - s_time, 1.2)
