@@ -326,6 +326,9 @@ class DataCleaner:
     @staticmethod
     def clean_files_by_size_per_folder(filelist, reduce_size, pattern):
         """Remove files by directory, remove oldest directories first"""
+        if reduce_size < 0:
+            return []
+
         remove_cands = [
             file_obj for file_obj in filelist
             if fnmatch.fnmatch(file_obj[0], pattern)]
@@ -363,6 +366,9 @@ class DataCleaner:
     def clean_files_by_size_optimized(
             filelist, reduce_size, whitelist=None, pattern=None):
         """Remove files, remove oldest files first"""
+        if reduce_size < 0:
+            return []
+
         if pattern:
             if whitelist:
                 remove_cands = [
