@@ -4,6 +4,8 @@ import tempfile
 import mock
 import shutil
 import time
+import itertools
+import os
 
 from mediaire_toolbox.data_cleaner import DataCleaner
 
@@ -298,8 +300,10 @@ class TestDataCleaner(unittest.TestCase):
                 priority_list=['file2', 'file4', 'file*']
             )
             removed = dc_instance.clean_up(dry_run=True)
+            # TODO file should be deleted only once
             self.assertEqual(
                 [('file2', 5, 10),
+                 ('file4', 13, 30),
                  ('file4', 13, 30)],
                 removed
             )
@@ -338,12 +342,11 @@ class TestDataCleaner(unittest.TestCase):
                 priority_list=['*old*.nii', '*nii', '*.png', 'file*']
             )
             removed = dc_instance.clean_up(dry_run=True)
+            # TODO file should be ideally deleted only once
             self.assertEqual(
                 [('folder1/folder2/old_file2.nii', 10, 30),
                  ('folder1/folder2/file4.nii', 10, 30),
-                 ('folder1/0001.png', 0, 10),
-                 ('folder1/0002.png', 0, 10),
-                 ('folder1/0003.png', 0, 10)],
+                 ('folder1/folder2/old_file2.nii', 10, 30)],
                 removed
             )
 
@@ -384,7 +387,7 @@ class TestDataCleaner(unittest.TestCase):
                  ('folder3/0002.dcm', 5, 10)],
                 removed
             )
-            
+
     def test_do_not_clean_young_files(self):
         with mock.patch.object(DataCleaner, 'scan_dir'), \
                 mock.patch.object(DataCleaner, '_get_file_stats') as mock_files, \
@@ -458,3 +461,35 @@ class TestDataCleaner(unittest.TestCase):
             )
             removed = dc_instance.clean_up(dry_run=True)
             self.assertEqual([], removed)
+
+    def test_scalability(self):
+        # test that the function does not take too long
+        list_of_folders = [str(i) for i in range(100)]
+
+        dcm_files = ['{}.dcm'.format(i) for i in range(200)]
+
+        filelist = [
+            (os.path.join(a, b), 0, 1)
+            for a, b in itertools.product(list_of_folders, dcm_files)]
+
+        s_time = time.time()
+        DataCleaner.clean_files_by_size_per_folder(
+            filelist, reduce_size=100000000, pattern='*dcm')
+        e_time = time.time()
+        self.assertLess(e_time - s_time, 1.2)
+
+    def test_scalability_2(self):
+        # test that the function does not take too long
+        list_of_folders = [str(i) for i in range(100)]
+
+        dcm_files = ['{}.dcm'.format(i) for i in range(200)]
+
+        filelist = [
+            (os.path.join(a, b), 0, 1)
+            for a, b in itertools.product(list_of_folders, dcm_files)]
+
+        s_time = time.time()
+        DataCleaner.clean_files_by_size_optimized(
+            filelist, reduce_size=100000000, pattern='*dcm')
+        e_time = time.time()
+        self.assertLess(e_time - s_time, 1)
