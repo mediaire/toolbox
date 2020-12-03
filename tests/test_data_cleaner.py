@@ -3,6 +3,7 @@ import logging
 import tempfile
 import mock
 import shutil
+import time
 
 from mediaire_toolbox.data_cleaner import DataCleaner
 
