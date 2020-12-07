@@ -4,6 +4,9 @@ import fnmatch
 import logging
 import argparse
 
+from operator import itemgetter
+from itertools import groupby
+
 from mediaire_toolbox.logging.base_logging_conf import basic_logging_conf
 
 default_logger = logging.getLogger(__name__)
@@ -22,7 +25,8 @@ class DataCleaner:
     2. For the size restriction, as long as time restriction
         is met, stop checking.
     3. whitelists/blacklists:
-        Two lists can have overlap. If a file matches boths lists, then it shall
+        Two lists can have overlap. If a file matches boths lists,
+        then it shall
         not be deleted.
         a.) Files that match Whitelist patterns shall not be deleted, even if
         conditions not met. This has a priority over the blacklist.
@@ -35,7 +39,7 @@ class DataCleaner:
 
     def __init__(self, folder: str, folder_size_soft_limit: int,
                  folder_size_hard_limit: int, max_data_seconds: int,
-                 min_data_seconds: int=-1, whitelist=None, blacklist=None,
+                 min_data_seconds: int = -1, whitelist=None, blacklist=None,
                  priority_list=None):
         """
         Parameters
@@ -67,7 +71,8 @@ class DataCleaner:
             i.e if the priority_list = [pattern_A, pattern_B, pattern_C], and
             Then first the files outside the whitelist and priority_list
             lists are deleted;
-            if the data folder is still too large then files that match pattern_A are
+            if the data folder is still too large then files that match
+            pattern_A are
             deleted. then the files matching pattern_B and then at last
             files matching pattern_C.
         """
@@ -144,9 +149,8 @@ class DataCleaner:
     def _filter_too_young_files(self, filestat_list):
         """Remove candidates from the (filename, creation_time, filesize)
         which are too young to be deleted"""
-        return filter(lambda x: not self._check_too_young(x[1],
-                                                          self.min_data_seconds),
-                      filestat_list)
+        return filter(lambda x: not self._check_too_young(
+            x[1], self.min_data_seconds), filestat_list)
 
     @staticmethod
     def _sum_filestat_list(filestat_list):
@@ -232,8 +236,9 @@ class DataCleaner:
         return removed, removed_index, removed_size
 
     @staticmethod
-    def clean_files_by_date(filelist, max_data_seconds,
-                            whitelist=None, blacklist=None, clean_folder=False):
+    def clean_files_by_date(
+            filelist, max_data_seconds,
+            whitelist=None, blacklist=None, clean_folder=False):
         """Clean files that are older than max_data_seconds.
 
         Parameters
@@ -263,16 +268,18 @@ class DataCleaner:
                 removed.append(filelist[i])
                 removed_index_list.append(i)
                 if clean_folder:
-                    c_removed, c_removed_index, _ = DataCleaner.clean_file_folder(
-                        filelist, file, whitelist, blacklist)
+                    c_removed, c_removed_index, _ = (
+                        DataCleaner.clean_file_folder(
+                            filelist, file, whitelist, blacklist))
                     removed += c_removed
                     removed_index_list += c_removed_index
         DataCleaner._remove_from_file_list(filelist, removed_index_list)
         return removed
 
     @staticmethod
-    def clean_files_by_size(filelist, reduce_size,
-                            whitelist=None, blacklist=None, clean_folder=False):
+    def clean_files_by_size(
+            filelist, reduce_size,
+            whitelist=None, blacklist=None, clean_folder=False):
         """Clean the files by size.
 
         Parameters
@@ -315,6 +322,77 @@ class DataCleaner:
                 break
         DataCleaner._remove_from_file_list(filelist, removed_index_list)
         return removed
+
+    @staticmethod
+    def clean_files_by_size_per_folder(filelist, reduce_size, pattern):
+        """Remove files by directory, remove oldest directories first"""
+        if reduce_size < 0:
+            return []
+
+        if pattern:
+            remove_cands = [
+                file_obj for file_obj in filelist
+                if fnmatch.fnmatch(file_obj[0], pattern)]
+        else:
+            return []
+
+        # group files by their dir name
+        sorted_f = sorted(remove_cands, key=itemgetter(0))
+        groups = [
+            [(x, y, z) for x, y, z in g]
+            for k, g in groupby(sorted_f, key=lambda x: os.path.dirname(x[0]))]
+
+        # create a list of tuples
+        # ([list of files], min m_time of file, sum of file sizes)
+        groups_with_data = [
+            (
+                g_list,
+                min(list(map(itemgetter(1), g_list))),
+                sum(list(map(itemgetter(2), g_list)))
+            ) for g_list in groups
+        ]
+
+        # remove oldest directory
+        groups_with_data.sort(key=itemgetter(1))
+        i = -1
+        for i, g_obj in enumerate(groups_with_data):
+            reduce_size -= g_obj[2]
+            if reduce_size < 0:
+                break
+
+        # flattent the list
+        return [
+            filelist for g_obj in groups_with_data[:i + 1]
+            for filelist in g_obj[0]]
+
+    @staticmethod
+    def clean_files_by_size_optimized(
+            filelist, reduce_size, whitelist=None,
+            pattern: str = None):
+        """Remove files, remove oldest files first"""
+        if reduce_size < 0:
+            return []
+
+        if pattern:
+            if whitelist:
+                remove_cands = [
+                    file_obj for file_obj in filelist
+                    if DataCleaner._fnmatch(file_obj[0], [pattern])
+                    and not DataCleaner._fnmatch(file_obj[0], whitelist)
+                    ]
+            else:
+                remove_cands = [
+                    file_obj for file_obj in filelist
+                    if fnmatch.fnmatch(file_obj[0], pattern)]
+        else:
+            return []
+
+        i = -1
+        for i, file_obj in enumerate(remove_cands):
+            reduce_size -= file_obj[2]
+            if reduce_size < 0:
+                break
+        return remove_cands[:i + 1]
 
     @staticmethod
     def remove_files(remove_list):
@@ -374,7 +452,8 @@ class DataCleaner:
         Paremeters
         ----------
         dry_run: bool
-            True if only returning the files to be deleted and not deleting them
+            True if only returning the files to be deleted and
+            not deleting them
 
         Return
         ------
@@ -415,16 +494,19 @@ class DataCleaner:
                 else:
                     # remove files based on priority list
                     for pattern in self.priority_list:
-                        if pattern == '*.dcm' or pattern == '*dcm':
-                            clean_folder = True
+                        if pattern in ['*.dcm', '*dcm']:
+                            removed = self.clean_files_by_size_per_folder(
+                                filelist, reduce_size, pattern)
                         else:
-                            clean_folder = False
-                        removed = self.clean_files_by_size(
-                            filelist, reduce_size,
-                            whitelist=whitelist, blacklist=[pattern],
-                            clean_folder=clean_folder)
+                            removed = self.clean_files_by_size_optimized(
+                                filelist, reduce_size,
+                                whitelist=whitelist, pattern=pattern)
+
                         reduce_size -= self._sum_filestat_list(removed)
                         remove_list += removed
+        default_logger.info(
+            "Starting to remove {} files..."
+            .format(len(remove_list)))
         if dry_run:
             self._log_debug_removed(remove_list)
         else:
