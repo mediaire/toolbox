@@ -59,6 +59,8 @@ class Transaction(Base):
     # Current state of the transaction:
     # ['completed', 'failed', 'processing', 'queued']
     task_state = Column(Enum(TaskState))
+    # Component name of the current task:
+    # ['brain_segmentation', 'lesion_segmentation', ....]
     processing_state = Column(String(255))
     # task progress of the transaction,
     # int between 0(start) and 100 (finished).
