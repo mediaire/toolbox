@@ -60,12 +60,22 @@ class Transaction(Base):
     # transaction states
     # Current state of the transaction:
     # ['completed', 'failed', 'processing', 'queued']
+
+    # Completed - analysis ran through without any error
+    # Failed - An error occurred. For most of the known errors,
+    #          see md_commons/exceptions
+    # Processing - the analysis is currenlty being processed
+    # Queued - the analysis is currenlty being held in the queue, because
+    # another analysis is currenlty already being processed
+
+    # Transition of states:   queued - > processing -> completed/failed
+
     task_state = Column(Enum(TaskState))
     # Component name of the current task:
     # ['brain_segmentation', 'lesion_segmentation', ....]
     processing_state = Column(String(255))
     # task progress of the transaction,
-    # int between 0(start) and 100 (finished).
+    # int between 0 (start) and 100 (finished).
     task_progress = Column(Integer, default=0)
     # 1 if this transaction was skipped
     task_skipped = Column(Integer, default=0)
@@ -81,11 +91,11 @@ class Transaction(Base):
     # series description of selected sequences that are processed.
     # indexed from Task object, for free text search
     sequences = Column(String())
-    # the json string object of the Task object
+    # the json object of the Task object
     last_message = Column(String)
 
     # misc
-    # DateTime transaction was exported
+    # DateTime when transaction data was exported to client api
     data_uploaded = Column(DateTime())
     # Transaction should be billed if empty
     billable = Column(String())
