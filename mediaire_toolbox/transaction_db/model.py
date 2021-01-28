@@ -16,51 +16,88 @@ class Transaction(Base):
 
     __tablename__ = 'transactions'
 
-    """A general transaction, this could be used by any pipeline"""
+    """Mediaire transaction table"""
     transaction_id = Column(Integer, Sequence(
         'transaction_id'), primary_key=True)
 
-    # study info
+    # study instance uid dicom tag
     study_id = Column(String(255))
+    # patient id dicom tag
     patient_id = Column(String(255))
+    # patient name dicom tag
     name = Column(String(255))
+    # patient birth date dicom tag
     birth_date = Column(Date())
     # TODO convert this to date
+    # study date dicom tag, in string format 'YYYYMMDD'
     study_date = Column(String())
+    # 1 if this transaction has patient consent
     patient_consent = Column(Integer, default=0)
-    # indexed from DICOM header, for free text search
+    # institution dicom tag indexed from DICOM header, for free text search
     institution = Column(String())
 
-    # transaction dates
+    # Datetime when the transaction moved to 'processing' state for
+    # the first time
     start_date = Column(DateTime())
+    # Datetime when the transaction moved to 'completed' state for
+    # the first time
     end_date = Column(DateTime())
-    # time when the transaction was created
+    # Datetime when the transaction was created
     creation_date = Column(DateTime())
 
     # transaction types
+    # mdbrain version
     version = Column(String(31))
+    # analysis type: ['mdbrain_ms', 'mdbrain_nd', 'mdspine_ms']
     analysis_type = Column(String(31))
+    # qa score of the transaction: ['rejected', 'good', 'acceptable']
+    # If the value is 'rejected', the analysis will create a
+    # bad qa score report
     qa_score = Column(String(31))
+    # Product id of the transaction, 1 (mdbrain) or 2 (mdspine)
     product_id = Column(Integer, default=1)
 
     # transaction states
+    # Current state of the transaction:
+    # ['completed', 'failed', 'processing', 'queued']
+
+    # Completed - analysis ran through without any error
+    # Failed - An error occurred. For most of the known errors,
+    #          see md_commons/exceptions
+    # Processing - the analysis is currenlty being processed
+    # Queued - the analysis is currenlty being held in the queue, because
+    # another analysis is currenlty already being processed
+
+    # Transition of states:   queued - > processing -> completed/failed
+
     task_state = Column(Enum(TaskState))
+    # Component name of the current task:
+    # ['brain_segmentation', 'lesion_segmentation', ....]
     processing_state = Column(String(255))
+    # task progress of the transaction,
+    # int between 0 (start) and 100 (finished).
     task_progress = Column(Integer, default=0)
+    # 1 if this transaction was skipped
     task_skipped = Column(Integer, default=0)
+    # 1 if this transaction was cancelled
     task_cancelled = Column(Integer, default=0)
+    # 1 if this transaction was archived
     archived = Column(Integer, default=0)
 
+    # Error message of the transaction, if it failed
     error = Column(String())
     # new platform status: unseen / reviewed / sent_to_pacs
     status = Column(String())
+    # series description of selected sequences that are processed.
     # indexed from Task object, for free text search
     sequences = Column(String())
-    # indexed from DICOM header, for sorting
+    # the json object of the Task object
     last_message = Column(String)
 
     # misc
+    # DateTime when transaction data was exported to client api
     data_uploaded = Column(DateTime())
+    # Transaction should be billed if empty
     billable = Column(String())
 
     def _datetime_to_str(self, dt):
@@ -159,9 +196,12 @@ class User(Base):
     """for multi-tenant pipelines, users might be required"""
     __tablename__ = 'users'
 
+    # user id
     id = Column(Integer, Sequence('id'), primary_key=True)
+    # user name
     name = Column(String(255), unique=True)
     hashed_password = Column(String(128))
+    # Datetime the user was added
     added = Column(DateTime(), default=datetime.datetime.utcnow)
 
     @staticmethod
@@ -229,7 +269,7 @@ class UserRole(Base):
 
 
 class UserPreferences(Base):
-    
+
     """for multi-tenant pipelines, users might have different preferences
     like the language they want their reports in"""
     __tablename__ = 'users_preferences'
@@ -246,7 +286,7 @@ class UserPreferences(Base):
         self.user_id = d.get('user_id')
         self.report_language = d.get('report_language')
         return self
-    
+
 
 class Role(Base):
 
@@ -256,6 +296,7 @@ class Role(Base):
 
     role_id = Column(String(64),
                      primary_key=True)
+    # Description of the role: ['admin', 'default_role', 'spectator' ...]
     description = Column(String)
     # encoded permissions for this role, 1 bit for each
     permissions = Column(Integer)
