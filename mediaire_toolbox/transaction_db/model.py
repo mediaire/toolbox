@@ -50,9 +50,11 @@ class Transaction(Base):
     version = Column(String(31))
     # analysis type: ['mdbrain_ms', 'mdbrain_nd', 'mdspine_ms']
     analysis_type = Column(String(31))
-    # qs score of the transaction: ['rejected', 'good', 'acceptable''
+    # qa score of the transaction: ['rejected', 'good', 'acceptable']
+    # If the value is 'rejected', the analysis will create a
+    # bad qa score report
     qa_score = Column(String(31))
-    # Product id of the transaction, 1 or 2
+    # Product id of the transaction, 1 (mdbrain) or 2 (mdspine)
     product_id = Column(Integer, default=1)
 
     # transaction states
@@ -76,7 +78,7 @@ class Transaction(Base):
     error = Column(String())
     # new platform status: unseen / reviewed / sent_to_pacs
     status = Column(String())
-    # series description of matched sequences.
+    # series description of selected sequences that are processed.
     # indexed from Task object, for free text search
     sequences = Column(String())
     # the json string object of the Task object
