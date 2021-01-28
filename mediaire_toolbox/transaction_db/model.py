@@ -85,7 +85,7 @@ class Transaction(Base):
     # misc
     # DateTime transaction was exported
     data_uploaded = Column(DateTime())
-    # Transaction should not be billed, if not empty
+    # Transaction should be billed if empty
     billable = Column(String())
 
     def _datetime_to_str(self, dt):
