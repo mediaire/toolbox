@@ -12,7 +12,7 @@ MIGRATIONS = {
         "UPDATE transactions SET task_progress = 10 WHERE processing_state = 'spm_volumetry'",
         "UPDATE transactions SET task_progress = 80 WHERE processing_state = 'volumetry_assessment'",
         "UPDATE transactions SET task_progress = 90 WHERE processing_state = 'report'",
-        "UPDATE transactions SET task_progress = 100 WHERE processing_state = 'send_to_pacs'"    
+        "UPDATE transactions SET task_progress = 100 WHERE processing_state = 'send_to_pacs'"
     ],
     3: [
         "ALTER TABLE transactions ADD COLUMN task_skipped INT DEFAULT 0",
@@ -53,6 +53,9 @@ MIGRATIONS = {
         "ALTER TABLE transactions ADD COLUMN version VARCHAR(31)",
         "ALTER TABLE transactions ADD COLUMN analysis_type VARCHAR(31)",
         "ALTER TABLE transactions ADD COLUMN qa_score VARCHAR(31)",
+    ],
+    15: [
+        "CREATE INDEX index_p_a_s_t ON transactions(patient_id,analysis_type,study_date,transaction_id)"
     ]
 }
 
