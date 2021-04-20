@@ -315,6 +315,8 @@ class TransactionDB:
             t.processing_state = new_processing_state
             t.task_state = TaskState.processing
             t.last_message = last_message
+            t.task_cancelled = 0
+            t.task_skipped = 0
             t.task_progress = task_progress
             if not t.start_date:
                 # set start date first time transaction was set to processing
