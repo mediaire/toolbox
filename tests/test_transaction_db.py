@@ -312,6 +312,26 @@ class TestTransactionDB(unittest.TestCase):
 
         t_db.close()
 
+    def test_peek_queued_all(self):
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+
+        tr_1 = self._get_test_transaction()
+        t_id_1 = t_db.create_transaction(tr_1)
+        t_db.set_queued(t_id_1, '', 'wait')
+
+        tr_2 = self._get_test_transaction()
+        # just in case
+        t_id_2 = t_db.create_transaction(tr_2)
+
+        t_db.set_queued(t_id_2, '', 'wait')
+
+        lt = list(t_db.peek_queued('wait', peek_all=True))
+        self.assertEqual(2, len(lt))
+        self.assertEqual([tr_1, tr_2], lt)
+
+        t_db.close()
+
     def test_set_status(self):
         engine = temp_db.get_temp_db()
         tr_1 = self._get_test_transaction()
@@ -471,7 +491,8 @@ class TestTransactionDB(unittest.TestCase):
 
         try:
             t_db.set_patient_consent(t_id)
-        except Exception:
+        except Exception as e:
+            print(e)
             pass
 
         t = t_db.get_transaction(t_id)
@@ -668,7 +689,7 @@ class TestTransactionDB(unittest.TestCase):
         t_db.add_role('radiologist', 'whatever')
 
         t_db.revoke_user_role(user_id, 'radiologist')
-        
+
     def test_user_preferences(self):
         """test that the preferences saving and retrieving system works"""
         engine = temp_db.get_temp_db()
@@ -678,16 +699,16 @@ class TestTransactionDB(unittest.TestCase):
 
         self.assertTrue(t_db.get_user_preferences(user_id_1) is None)
         self.assertTrue(t_db.get_user_preferences(user_id_2) is None)
-        
-        preferences = { 'report_language': 'en' }
+
+        preferences = {'report_language': 'en'}
         t_db.set_user_preferences(user_id_1, preferences)
-        preferences = { 'report_language': 'de' }
+        preferences = {'report_language': 'de'}
         t_db.set_user_preferences(user_id_2, preferences)
-        
+
         prefs = t_db.get_user_preferences(user_id_1)
         self.assertEqual(user_id_1, prefs['user_id'])
         self.assertEqual('en', prefs['report_language'])
-        
+
         prefs = t_db.get_user_preferences(user_id_2)
         self.assertEqual(user_id_2, prefs['user_id'])
         self.assertEqual('de', prefs['report_language'])
@@ -699,9 +720,9 @@ class TestTransactionDB(unittest.TestCase):
         engine = temp_db.get_temp_db()
         t_db = TransactionDB(engine)
         user_id_1 = t_db.add_user('Pere1', 'pwd')
-        
+
         t_db.set_user_preferences(user_id_1, {'foo': 'bar'})
-        
+
     @unittest.expectedFailure
     def test_user_preferences_invalid_user(self):
         """test that user_id is a foreign key in the relational model
@@ -710,5 +731,4 @@ class TestTransactionDB(unittest.TestCase):
         engine = temp_db.get_temp_db()
         t_db = TransactionDB(engine)
 
-        t_db.set_user_preferences(100, { 'report_language': 'en' })
-        
+        t_db.set_user_preferences(100, {'report_language': 'en'})
