@@ -257,7 +257,7 @@ class TransactionDB:
 
     @t_db_retry
     @lock
-    def peek_queued(self, processing_state='waiting'):
+    def peek_queued(self, processing_state='waiting', peek_all=False):
         """Peeks the oldest queued transaction from the database, if any.
         Note that this is a peek, not a poll operation, so unless the
         transaction is moved into processing state, it will be returned
@@ -267,10 +267,14 @@ class TransactionDB:
         ----------
         processing_state: str
             filter by processing_state if not none
+        peek_all: bool
+            if True, will return a sqlalchemy query with all queued
+            Transactions
 
         Returns
         -------
-            A Transaction object, or None"""
+            A Transaction object, or None if nothing can be peeked
+            A sqlalchemy Query object if peek_all == True"""
         # NOTE assumming that a transaction with low
         # transactions_id is created earlier
         query = self.session.query(Transaction) \
@@ -282,7 +286,7 @@ class TransactionDB:
 
         queued = query.order_by(Transaction.transaction_id.asc())
         if queued:
-            return queued.first()
+            return queued if peek_all else queued.first()
         return None
 
     @t_db_retry
