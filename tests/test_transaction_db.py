@@ -4,13 +4,13 @@ import shutil
 import json
 import os
 import types
-import sys, traceback
+import sys
+import traceback
 
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from sqlalchemy import create_engine
 
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
-from mediaire_toolbox.transaction_db.exceptions import TransactionDBException
 from mediaire_toolbox.transaction_db.model import (
     TaskState, Transaction, UserTransaction, User, Role, UserRole
 )
@@ -577,6 +577,21 @@ class TestTransactionDB(unittest.TestCase):
         t_db.set_billable(t_id, 'bill')
         t = t_db.get_transaction(t_id)
         self.assertEqual('bill', t.billable)
+        t_db.close()
+
+    def test_set_priority(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(0, t.priority)
+
+        t_db.set_billable(t_id, 2)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(2, t.priority)
+
         t_db.close()
 
     def test_add_user_ok(self):

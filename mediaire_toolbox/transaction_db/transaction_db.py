@@ -489,6 +489,17 @@ class TransactionDB:
             raise
 
     @t_db_retry
+    @lock
+    def set_priority(self, id_: int, priority):
+        try:
+            t = self._get_transaction_or_raise_exception(id_)
+            t.priority = priority
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+    @t_db_retry
     def add_user(self, name, password):
         """For multi-tenant transaction DBs, add a new user to it.
 
