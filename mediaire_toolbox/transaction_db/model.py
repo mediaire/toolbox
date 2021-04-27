@@ -1,7 +1,7 @@
 import datetime
 
 from sqlalchemy import Column, Integer, String, Sequence, DateTime, Date, Enum, \
-                        ForeignKey
+    ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from passlib.apps import custom_app_context as pwd_context
 
@@ -99,6 +99,9 @@ class Transaction(Base):
     data_uploaded = Column(DateTime())
     # Transaction should be billed if empty
     billable = Column(String())
+    # priority -> integer number that can affect the order in which
+    # transactions are dequeued
+    priority = Column(Integer, default=0)
 
     def _datetime_to_str(self, dt):
         return (
@@ -145,6 +148,7 @@ class Transaction(Base):
 
             'data_uploaded': self._datetime_to_str(self.data_uploaded),
             'billable': self.billable,
+            'priority': self.priority
         }
 
     def read_dict(self, d: dict):
@@ -184,6 +188,8 @@ class Transaction(Base):
 
         self.data_uploaded = self._str_to_datetime(d.get('data_uploaded'))
         self.billable = d.get('billable')
+        self.priority = d.get('priority')
+
         return self
 
     def __repr__(self):
@@ -212,10 +218,10 @@ class User(Base):
         return pwd_context.verify(password, self.hashed_password)
 
     def to_dict(self):
-        return { 'id': self.id,
-                 'name': self.name,
-                 'hashed_password': self.hashed_password,
-                 'added': self.added.strftime("%Y-%m-%d %H:%M:%S") }
+        return {'id': self.id,
+                'name': self.name,
+                'hashed_password': self.hashed_password,
+                'added': self.added.strftime("%Y-%m-%d %H:%M:%S")}
 
     def read_dict(self, d: dict):
         self.id = d.get('id')
@@ -238,8 +244,8 @@ class UserTransaction(Base):
                             primary_key=True)
 
     def to_dict(self):
-        return { 'user_id': self.user_id,
-                 'transaction_id': self.transaction_id }
+        return {'user_id': self.user_id,
+                'transaction_id': self.transaction_id}
 
     def read_dict(self, d: dict):
         self.user_id = d.get('user_id')
@@ -259,8 +265,8 @@ class UserRole(Base):
                      primary_key=True)
 
     def to_dict(self):
-        return { 'user_id': self.user_id,
-                 'role_id': self.role_id }
+        return {'user_id': self.user_id,
+                'role_id': self.role_id}
 
     def read_dict(self, d: dict):
         self.user_id = d.get('user_id')
@@ -279,8 +285,8 @@ class UserPreferences(Base):
     report_language = Column(String(255))
 
     def to_dict(self):
-        return { 'user_id': self.user_id,
-                 'report_language': self.report_language }
+        return {'user_id': self.user_id,
+                'report_language': self.report_language}
 
     def read_dict(self, d: dict):
         self.user_id = d.get('user_id')
