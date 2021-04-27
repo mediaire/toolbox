@@ -588,7 +588,7 @@ class TestTransactionDB(unittest.TestCase):
         t = t_db.get_transaction(t_id)
         self.assertEqual(0, t.priority)
 
-        t_db.set_billable(t_id, 2)
+        t_db.set_priority(t_id, 2)
         t = t_db.get_transaction(t_id)
         self.assertEqual(2, t.priority)
 
