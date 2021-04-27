@@ -4,6 +4,7 @@ import shutil
 import json
 import os
 import types
+import sys, traceback
 
 from datetime import datetime, date, timedelta
 from sqlalchemy import create_engine
@@ -15,7 +16,7 @@ from mediaire_toolbox.transaction_db.model import (
 )
 
 from temp_db_base import TempDBFactory
-from _sqlite3 import OperationalError as Sqlite3OperationalError
+from sqlite3 import OperationalError as Sqlite3OperationalError
 from sqlalchemy.exc import OperationalError
 
 temp_db = TempDBFactory('test_transaction_db')
@@ -484,7 +485,7 @@ class TestTransactionDB(unittest.TestCase):
             if should_fail_once:
                 should_fail_once = False
                 # Raising this exception means it should be retried
-                raise OperationalError
+                raise OperationalError(None, None, None)
             return orig_f(t_id)
 
         t_db._get_transaction_or_raise_exception = mocked_f
@@ -492,7 +493,7 @@ class TestTransactionDB(unittest.TestCase):
         try:
             t_db.set_patient_consent(t_id)
         except Exception as e:
-            print(e)
+            traceback.print_exc(file=sys.stdout)
             pass
 
         t = t_db.get_transaction(t_id)
