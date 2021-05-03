@@ -143,6 +143,7 @@ class TransactionDB:
 
                     migrate(self.session, engine, db_version)
 
+    @t_db_retry
     @lock
     def create_transaction(
             self, t: Transaction,
