@@ -4,18 +4,19 @@ import shutil
 import json
 import os
 import types
+import sys
+import traceback
 
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from sqlalchemy import create_engine
 
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
-from mediaire_toolbox.transaction_db.exceptions import TransactionDBException
 from mediaire_toolbox.transaction_db.model import (
     TaskState, Transaction, UserTransaction, User, Role, UserRole
 )
 
 from temp_db_base import TempDBFactory
-from _sqlite3 import OperationalError as Sqlite3OperationalError
+from sqlite3 import OperationalError as Sqlite3OperationalError
 from sqlalchemy.exc import OperationalError
 
 temp_db = TempDBFactory('test_transaction_db')
@@ -484,7 +485,7 @@ class TestTransactionDB(unittest.TestCase):
             if should_fail_once:
                 should_fail_once = False
                 # Raising this exception means it should be retried
-                raise OperationalError
+                raise OperationalError(None, None, None)
             return orig_f(t_id)
 
         t_db._get_transaction_or_raise_exception = mocked_f
@@ -492,7 +493,7 @@ class TestTransactionDB(unittest.TestCase):
         try:
             t_db.set_patient_consent(t_id)
         except Exception as e:
-            print(e)
+            traceback.print_exc(file=sys.stdout)
             pass
 
         t = t_db.get_transaction(t_id)
@@ -576,6 +577,21 @@ class TestTransactionDB(unittest.TestCase):
         t_db.set_billable(t_id, 'bill')
         t = t_db.get_transaction(t_id)
         self.assertEqual('bill', t.billable)
+        t_db.close()
+
+    def test_set_priority(self):
+        engine = temp_db.get_temp_db()
+        tr_1 = self._get_test_transaction()
+
+        t_db = TransactionDB(engine)
+        t_id = t_db.create_transaction(tr_1)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(0, t.priority)
+
+        t_db.set_priority(t_id, 2)
+        t = t_db.get_transaction(t_id)
+        self.assertEqual(2, t.priority)
+
         t_db.close()
 
     def test_add_user_ok(self):

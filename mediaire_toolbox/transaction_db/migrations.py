@@ -56,6 +56,9 @@ MIGRATIONS = {
     ],
     15: [
         "CREATE INDEX index_p_a_s_t ON transactions(patient_id,analysis_type,study_date,transaction_id)"
+    ],
+    16: [
+        "ALTER TABLE transactions ADD COLUMN priority INT DEFAULT 0"
     ]
 }
 
