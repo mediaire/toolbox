@@ -668,9 +668,9 @@ class TransactionDB:
 
     def add_study_metadata(self, study_id: str, origin: str,
                            c_move_time: datetime, overwrite: bool=False):
-        """Add metadata associated with a study sent to mdbrain
-        mainly used by auto_pull systems.
-        Throws TransactionDBException is metadata for this study was
+        """Add metadata associated with a study sent to mdbrain.
+        (mainly used by auto_pull systems).
+        Throws TransactionDBException if metadata for this study was
         already added before."""
         try:
             md = self.session.query(StudiesMetadata)\
