@@ -197,6 +197,18 @@ class Transaction(Base):
             self.transaction_id, self.patient_id, self.start_date)
 
 
+class StudiesMetadata(Base):
+
+    __tablename__ = 'studies_metadata'
+
+    # study instance uid dicom tag
+    study_id = Column(String(255), primary_key=True)
+    # dicom_grazer, longitudinal_grazer, ...
+    origin = Column(String(255))
+    # if auto_pull
+    c_move_time = Column(DateTime())
+
+
 class User(Base):
 
     """for multi-tenant pipelines, users might be required"""
