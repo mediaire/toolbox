@@ -666,6 +666,7 @@ class TransactionDB:
         finally:
             self.session.rollback()
 
+    @t_db_retry
     def add_study_metadata(self, study_id: str, origin: str,
                            c_move_time: datetime, overwrite: bool=False):
         """Add metadata associated with a study sent to mdbrain.
@@ -689,6 +690,7 @@ class TransactionDB:
         finally:
             self.session.rollback()
 
+    @t_db_retry
     def get_study_metadata(self, study_id: str) -> StudiesMetadata:
         try:
             return self.session.query(StudiesMetadata)\
