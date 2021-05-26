@@ -103,12 +103,14 @@ class Transaction(Base):
     # transactions are dequeued
     priority = Column(Integer, default=0)
 
-    def _datetime_to_str(self, dt):
+    @staticmethod
+    def _datetime_to_str(dt):
         return (
             dt.strftime("%Y-%m-%d %H:%M:%S") if dt else None
         )
-
-    def _str_to_datetime(self, str_):
+        
+    @staticmethod
+    def _str_to_datetime(str_):
         return (
             datetime.datetime.strptime(str_, "%Y-%m-%d %H:%M:%S")
             if str_ else None
@@ -207,6 +209,11 @@ class StudiesMetadata(Base):
     origin = Column(String(255))
     # if auto_pull
     c_move_time = Column(DateTime())
+
+    def to_dict(self):
+        return {'study_id': self.study_id,
+                'origin': self.origin,
+                'c_move_time': Transaction._datetime_to_str(self.c_move_time)}
 
 
 class User(Base):
