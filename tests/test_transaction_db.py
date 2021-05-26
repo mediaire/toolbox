@@ -13,7 +13,7 @@ from sqlalchemy import create_engine
 from mediaire_toolbox.transaction_db.transaction_db import TransactionDB
 from mediaire_toolbox.transaction_db.model import (
     TaskState, Transaction, UserTransaction, User, Role, UserRole
-)
+, StudiesMetadata)
 
 from temp_db_base import TempDBFactory
 from sqlite3 import OperationalError as Sqlite3OperationalError
@@ -781,3 +781,15 @@ class TestTransactionDB(unittest.TestCase):
         md = t_db.get_study_metadata('s1')
 
         self.assertEqual('longitudinal_grazer', md.origin)
+        
+    def test_study_metadata_to_dict(self):
+        md = StudiesMetadata()
+        md.origin = 'dicom_grazer'
+        md.c_move_time = datetime.utcnow()
+        md.study_id = 's1'
+        
+        self.assertEqual({
+            'origin': 'dicom_grazer',
+            'c_move_time': Transaction._datetime_to_str(md.c_move_time),
+            'study_id': 's1'
+        }, md.to_dict())
