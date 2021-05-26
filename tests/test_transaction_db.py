@@ -748,3 +748,36 @@ class TestTransactionDB(unittest.TestCase):
         t_db = TransactionDB(engine)
 
         t_db.set_user_preferences(100, {'report_language': 'en'})
+
+    def test_add_get_study_metadata(self):
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+
+        t_db.add_study_metadata('s1', 'dicom_grazer', datetime.utcnow())
+        md = t_db.get_study_metadata('s1')
+
+        self.assertEqual('dicom_grazer', md.origin)
+
+        md = t_db.get_study_metadata('s2')
+
+        self.assertTrue(md is None)
+
+    @unittest.expectedFailure
+    def test_study_metadata_immutable(self):
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+
+        t_db.add_study_metadata('s1', 'dicom_grazer', datetime.utcnow())
+        t_db.add_study_metadata('s1', 'longitudinal_grazer', datetime.utcnow())
+
+    def test_study_metadata_mutable(self):
+        engine = temp_db.get_temp_db()
+        t_db = TransactionDB(engine)
+
+        t_db.add_study_metadata('s1', 'dicom_grazer', datetime.utcnow())
+        t_db.add_study_metadata('s1', 'longitudinal_grazer', datetime.utcnow(),
+                                overwrite=True)
+
+        md = t_db.get_study_metadata('s1')
+
+        self.assertEqual('longitudinal_grazer', md.origin)

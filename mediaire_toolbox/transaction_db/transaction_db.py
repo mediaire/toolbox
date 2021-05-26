@@ -14,7 +14,7 @@ from mediaire_toolbox.transaction_db.model import Transaction, \
     UserTransaction, \
     User, \
     Role, \
-    UserRole, UserPreferences
+    UserRole, UserPreferences, StudiesMetadata
 
 from mediaire_toolbox.transaction_db.exceptions import TransactionDBException
 from mediaire_toolbox.transaction_db import migrations
@@ -665,6 +665,36 @@ class TransactionDB:
             return None
         finally:
             self.session.rollback()
+
+    def add_study_metadata(self, study_id: str, origin: str,
+                           c_move_time: datetime, overwrite: bool=False):
+        """Add metadata associated with a study sent to mdbrain
+        mainly used by auto_pull systems.
+        Throws TransactionDBException is metadata for this study was
+        already added before."""
+        try:
+            md = self.session.query(StudiesMetadata)\
+                .filter_by(study_id=study_id).first()
+            if md and not overwrite:
+                raise TransactionDBException((
+                    "Study was already sent to mdbrain. "))
+
+            if not md:
+                md = StudiesMetadata()
+                md.study_id = study_id
+            md.origin = origin
+            md.c_move_time = c_move_time
+            self.session.add(md)
+            self.session.commit()
+        finally:
+            self.session.rollback()
+
+    def get_study_metadata(self, study_id: str) -> StudiesMetadata:
+        try:
+            return self.session.query(StudiesMetadata)\
+                .filter_by(study_id=study_id).first()
+        finally:
+            self.session.commit()
 
     def close(self):
         self.session.close()
