@@ -205,8 +205,11 @@ class TransactionDB:
             return t.transaction_id
         except Exception:
             self.session.rollback()
-            if(t.transaction_id):
-                self.session.delete(t)
+            try:
+                if(t.transaction_id):
+                    self.session.delete(t)
+            except:
+                pass
             raise
 
     @t_db_retry
